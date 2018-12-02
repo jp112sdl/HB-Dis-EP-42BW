@@ -3,29 +3,33 @@
 // 2016-10-31 papa Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
 // 2018-12-01 jp112sdl Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
 //- -----------------------------------------------------------------------------------------------------------------------
+
+// use Arduino IDE Board Setting: BOBUINO Layout
+
 // define this to read the device id, serial and device type from bootloader section
 // #define USE_OTA_BOOTLOADER
-#define USE_HW_SERIAL
+// #define USE_HW_SERIAL
 // #define NDEBUG
+// #define NDISPLAY
 
+//////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
-//#include <GxGDEW042Z15/GxGDEW042Z15.h>    // 4.2" b/w/r
 #include <GxGDEW042T2/GxGDEW042T2.h>      // 4.2" b/w
 #include <GxIO/GxIO_SPI/GxIO_SPI.h>
 #include <GxIO/GxIO.h>
 #include "U8G2_FONTS_GFX.h"
 
-#define GxRST  9
-#define GxBUSY 3
-#define GxDC   30
-#define GxCS   23
+#define GxRST_PIN   9
+#define GxBUSY_PIN  3
+#define GxDC_PIN   30
+#define GxCS_PIN   23
 
-GxIO_Class io(SPI, GxCS,  GxDC,  GxRST); // arbitrary selection of 8, 9 selected for default of GxEPD_Class
-GxEPD_Class display(io , GxRST, GxBUSY ); // default selection of (9), 7
+GxIO_Class io(SPI, GxCS_PIN, GxDC_PIN, GxRST_PIN);
+GxEPD_Class display(io, GxRST_PIN, GxBUSY_PIN);
 
 U8G2_FOR_ADAFRUIT_GFX u8g2_for_adafruit_gfx;
 U8G2_FONTS_GFX u8g2Fonts(display);
-
+//////////////////////////////////////////////////////////////////////////////
 
 #define EI_NOTEXTERNAL
 #include <EnableInterrupt.h>
@@ -36,9 +40,14 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #include <Register.h>
 #include <MultiChannelDevice.h>
 
+#define CC1101_CS_PIN      10
+#define CC1101_GDO0_PIN     6
+#define CC1101_SCK_PIN     13
+#define CC1101_MOSI_PIN    11
+#define CC1101_MISO_PIN    12
 #define CONFIG_BUTTON_PIN  31
-#define LED_PIN_1          4
-#define LED_PIN_2          5
+#define LED_PIN_1           4
+#define LED_PIN_2           5
 #define BTN1_PIN           14
 #define BTN2_PIN           15
 #define BTN3_PIN           16
@@ -55,9 +64,9 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 
 #define DISPLAY_ROTATE     3 // 0 = 0° , 1 = 90°, 2 = 180°, 3 = 270°
 
-// number of available peers per channel
 #define PEERS_PER_CHANNEL 8
-#define LOWBAT_VOLTAGE    22
+#define LOWBAT_VOLTAGE    24
+
 #define MSG_START_KEY     0x02
 #define MSG_TEXT_KEY      0x12
 #define MSG_ICON_KEY      0x13
@@ -67,8 +76,6 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 // all library classes are placed in the namespace 'as'
 using namespace as;
 
-
-// define all device properties
 const struct DeviceInfo PROGMEM devinfo = {
   {0xf3, 0x43, 0x00},          // Device ID
   "JPDISEP000",                // Device Serial
@@ -93,12 +100,12 @@ struct {
 
 String List1Texts[(DISPLAY_LINES + 1 ) * 2];
 bool mustUpdateDisplay = false;
-
+bool runSetup          = true;
 /**
    Configure the used hardware
 */
-typedef AvrSPI<10, 11, 12, 13> SPIType;
-typedef Radio<SPIType, 6> RadioType;
+typedef AvrSPI<CC1101_CS_PIN, CC1101_MOSI_PIN, CC1101_MISO_PIN, CC1101_SCK_PIN> SPIType;
+typedef Radio<SPIType, CC1101_GDO0_PIN> RadioType;
 typedef DualStatusLed<LED_PIN_1, LED_PIN_2> LedType;
 typedef AskSin<LedType, BatterySensor, RadioType> Hal;
 Hal hal;
@@ -164,9 +171,10 @@ class RemoteList1 : public RegList1<RemoteReg1> {
 
     void defaults () {
       clear();
+      aesActive(false);
       uint8_t initValues[TEXT_LENGTH] = {32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32};
-      TEXT1(initValues);
-      TEXT2(initValues);
+      //TEXT1(initValues);
+      //TEXT2(initValues);
     }
 };
 
@@ -177,7 +185,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
     uint8_t       repeatcnt;
     volatile bool isr;
     uint8_t       commandIdx;
-    uint8_t       command[112];
+    uint8_t       command[224];
 
   public:
 
@@ -249,7 +257,9 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
             }
 
             if (command[i] == AS_ACTION_COMMAND_EOL) {
-              if (i > 1) currentLine++;
+              //DPRINT("EOL DETECTED. currentLine = ");DDECLN(currentLine);
+              //if (i > 1)
+              currentLine++;
               Text = "";
               getText = false;
             }
@@ -364,7 +374,7 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
         DisplayConfig.clBG = GxEPD_WHITE;
       }
       DisplayConfig.LeftAligned = this->getList0().statusMessageTextAlignmentLeftAligned();
-      //mustUpdateDisplay = true;
+      if (!runSetup) mustUpdateDisplay = true;
     }
 };
 DisplayDevice sdev(devinfo, 0x20);
@@ -415,14 +425,17 @@ void initISR() {
 }
 
 void setup () {
+  runSetup = true;
   for (int i = 0; i < DISPLAY_LINES; i++) {
     DisplayLines[i].Icon = 0xff;
     DisplayLines[i].Text = "";
   }
 
   initIcons();
-
+#ifndef NDISPLAY
   display.init(57600);
+#endif
+
   DINIT(57600, ASKSIN_PLUS_PLUS_IDENTIFIER);
   sdev.init(hal);
   sdev.disp1Channel().button().init(BTN1_PIN);
@@ -445,7 +458,10 @@ void setup () {
   sdev.initDone();
   DDEVINFO(sdev);
   sdev.disp1Channel().changed(true);
+#ifndef NDISPLAY
   display.drawPaged(showInitDisplay);
+#endif
+  runSetup = false;
 }
 
 void loop() {
@@ -454,7 +470,9 @@ void loop() {
   if ( worked == false && poll == false ) {
     hal.activity.savePower<Sleep<>>(hal);
   }
+#ifndef NDISPLAY
   updateDisplay(mustUpdateDisplay);
+#endif
 }
 
 void showInitDisplay() {
@@ -475,9 +493,20 @@ void updateDisplay(bool doit) {
 
 void updateDisplay() {
   u8g2Fonts.setFont(u8g2_font_helvB18_tf);
+  u8g2Fonts.setFontMode(1);
+  u8g2Fonts.setForegroundColor(DisplayConfig.clFG);
+  u8g2Fonts.setBackgroundColor(DisplayConfig.clBG);
   display.fillScreen(DisplayConfig.clBG);
+
   for (uint16_t i = 0; i < 10; i++) {
+    DisplayLines[i].Text.replace("{", "ä");
+    DisplayLines[i].Text.replace("|", "ö");
     DisplayLines[i].Text.replace("}", "ü");
+    DisplayLines[i].Text.replace("[", "Ä");
+    DisplayLines[i].Text.replace("#", "Ö");
+    DisplayLines[i].Text.replace("$", "Ü");
+    DisplayLines[i].Text.replace("_", "ß");
+    DisplayLines[i].Text.replace("'", "=");
     DisplayLines[i].Text.trim();
     uint16_t left = (DisplayConfig.LeftAligned == true) ? 40 : (display.width() - 40 -  u8g2Fonts.getUTF8Width((DisplayLines[i].Text).c_str()));
     u8g2Fonts.setCursor(left, (i * 40) + 30);
