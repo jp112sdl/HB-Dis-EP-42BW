@@ -15,6 +15,7 @@
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
 #include <GxGDEW042T2/GxGDEW042T2.h>      // 4.2" b/w
+
 #include <GxIO/GxIO_SPI/GxIO_SPI.h>
 #include <GxIO/GxIO.h>
 #include "U8G2_FONTS_GFX.h"
@@ -82,23 +83,24 @@ const struct DeviceInfo PROGMEM devinfo = {
   {0xf3, 0x43},                // Device Model
   0x10,                        // Firmware Version
   as::DeviceType::Remote,      // Device Type
-  {0x00, 0x00}                 // Info Bytes
+  {0x01, 0x01}                 // Info Bytes
 };
 
 typedef struct {
   uint8_t Icon = 0xff;
   String Text = "";
+  bool showLine = false;
 } DisplayLine;
-DisplayLine DisplayLines[DISPLAY_LINES + 1];
+DisplayLine DisplayLines[DISPLAY_LINES];
 
 struct {
   bool LeftAligned = false;
+  bool Inverted = false;
   uint16_t clFG = GxEPD_BLACK;
   uint16_t clBG = GxEPD_WHITE;
-  bool showLinesBetweenRows = false;
 } DisplayConfig;
 
-String List1Texts[(DISPLAY_LINES + 1 ) * 2];
+String List1Texts[DISPLAY_LINES * 2];
 bool mustUpdateDisplay = false;
 bool runSetup          = true;
 /**
@@ -111,31 +113,31 @@ typedef AskSin<LedType, BatterySensor, RadioType> Hal;
 Hal hal;
 BurstDetector<Hal> bd(hal);
 
-DEFREGISTER(Reg0, MASTERID_REGS, DREG_LOCALRESETDISABLE, DREG_DISPLAY, 0x90)
+DEFREGISTER(Reg0, MASTERID_REGS, DREG_LOCALRESETDISABLE, DREG_DISPLAY, DREG_TRANSMITTRYMAX)
 class DispList0 : public RegList0<Reg0> {
   public:
     DispList0(uint16_t addr) : RegList0<Reg0>(addr) {}
 
-    bool showLinesBetweenRows (uint8_t value) const {
-      return this->writeRegister(0x90, 0x01, 0, value & 0xff);
-    }
-    uint8_t showLinesBetweenRows () const {
-      return this->readRegister(0x90, 0x01, 0, false);
-    }
-
     void defaults () {
+      clear();
       localResetDisable(false);
       displayInverting(false);
       statusMessageTextAlignmentLeftAligned(false);
-      showLinesBetweenRows(false);
-      clear();
+      transmitDevTryMax(2);
     }
 };
 
-DEFREGISTER(RemoteReg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55)
+DEFREGISTER(RemoteReg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90)
 class RemoteList1 : public RegList1<RemoteReg1> {
   public:
     RemoteList1 (uint16_t addr) : RegList1<RemoteReg1>(addr) {}
+
+    bool showLine (uint8_t value) const {
+      return this->writeRegister(0x90, 0x01, 0, value & 0xff);
+    }
+    uint8_t showLine () const {
+      return this->readRegister(0x90, 0x01, 0, false);
+    }
 
     bool TEXT1 (uint8_t value[TEXT_LENGTH]) const {
       for (int i = 0; i < TEXT_LENGTH; i++) {
@@ -147,7 +149,7 @@ class RemoteList1 : public RegList1<RemoteReg1> {
       String a = "";
       for (int i = 0; i < TEXT_LENGTH; i++) {
         byte b = this->readRegister(0x36 + i, 0x20);
-        if (b == 0) b = 32;
+        if (b == 0x00) b = 0x20;
         a += char(b);
       }
       return a;
@@ -163,7 +165,7 @@ class RemoteList1 : public RegList1<RemoteReg1> {
       String a = "";
       for (int i = 0; i < TEXT_LENGTH; i++) {
         byte b = this->readRegister(0x46 + i, 0x20);
-        if (b == 0) b = 32;
+        if (b == 0x00) b = 0x20;
         a += char(b);
       }
       return a;
@@ -171,8 +173,9 @@ class RemoteList1 : public RegList1<RemoteReg1> {
 
     void defaults () {
       clear();
-      aesActive(false);
+      //aesActive(false);
       uint8_t initValues[TEXT_LENGTH] = {32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32};
+      showLine(false);
       //TEXT1(initValues);
       //TEXT2(initValues);
     }
@@ -197,10 +200,14 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
     }
 
     void configChanged() {
-      List1Texts[(number() - 1)  * 2] = this->getList1().TEXT1();
-      List1Texts[((number() - 1) * 2) + 1] = this->getList1().TEXT2();
-      DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINTLN(this->getList1().TEXT1());
-      DDEC(number()); DPRINT(F(" - TEXT2 = ")); DPRINTLN(this->getList1().TEXT2());
+      if (number() < 11) {
+        List1Texts[(number() - 1)  * 2] = this->getList1().TEXT1();
+        List1Texts[((number() - 1) * 2) + 1] = this->getList1().TEXT2();
+        DisplayLines[(number() - 1)].showLine = this->getList1().showLine();
+        DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINTLN(this->getList1().TEXT1());
+        DDEC(number()); DPRINT(F(" - TEXT2 = ")); DPRINTLN(this->getList1().TEXT2());
+        DDEC(number()); DPRINT(F(" - Line  = ")); DDECLN(this->getList1().showLine());
+      }
     }
 
     uint8_t status () const {
@@ -360,11 +367,8 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
 
     virtual void configChanged () {
       DPRINTLN(F("CONFIG LIST0 CHANGED"));
-      DPRINT(F("showLinesBetweenRows                  : ")); DDECLN(this->getList0().showLinesBetweenRows());
       DPRINT(F("displayInverting                      : ")); DDECLN(this->getList0().displayInverting());
       DPRINT(F("statusMessageTextAlignmentLeftAligned : ")); DDECLN(this->getList0().statusMessageTextAlignmentLeftAligned());
-
-      DisplayConfig.showLinesBetweenRows = this->getList0().showLinesBetweenRows();
 
       if (this->getList0().displayInverting()) {
         DisplayConfig.clFG = GxEPD_WHITE;
@@ -373,8 +377,14 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
         DisplayConfig.clFG = GxEPD_BLACK;
         DisplayConfig.clBG = GxEPD_WHITE;
       }
+
+      bool somethingChanged = (DisplayConfig.LeftAligned != this->getList0().statusMessageTextAlignmentLeftAligned() ||
+                               DisplayConfig.Inverted != this->getList0().displayInverting());
+
       DisplayConfig.LeftAligned = this->getList0().statusMessageTextAlignmentLeftAligned();
-      if (!runSetup) mustUpdateDisplay = true;
+      DisplayConfig.Inverted = this->getList0().displayInverting();
+
+      if (!runSetup && somethingChanged) mustUpdateDisplay = true;
     }
 };
 DisplayDevice sdev(devinfo, 0x20);
@@ -468,11 +478,11 @@ void loop() {
   bool worked = hal.runready();
   bool poll = sdev.pollRadio();
   if ( worked == false && poll == false ) {
+#ifndef NDISPLAY
+    updateDisplay(mustUpdateDisplay);
+#endif
     hal.activity.savePower<Sleep<>>(hal);
   }
-#ifndef NDISPLAY
-  updateDisplay(mustUpdateDisplay);
-#endif
 }
 
 void showInitDisplay() {
@@ -512,7 +522,7 @@ void updateDisplay() {
     u8g2Fonts.setCursor(left, (i * 40) + 30);
     u8g2Fonts.print(DisplayLines[i].Text);
 
-    if (DisplayConfig.showLinesBetweenRows) display.drawLine(0, (i * 40), display.width(), (i * 40), DisplayConfig.clFG);
+    if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), DisplayConfig.clFG);
 
     uint8_t icon_number = DisplayLines[i].Icon;
     if (icon_number != 255) {
@@ -522,11 +532,9 @@ void updateDisplay() {
         display.drawExampleBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , (24 - ( Icons[icon_number].height / 2)) + (i * 40) - 4, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
     }
   }
-
-  if (DisplayConfig.showLinesBetweenRows) display.drawLine(0, 399, display.width(), 399, DisplayConfig.clFG);
 }
 
-uint16_t centerPosition(char * text) {
+uint16_t centerPosition(const char * text) {
   return (display.width() / 2) - (u8g2Fonts.getUTF8Width(text) / 2);
 }
 
@@ -541,10 +549,10 @@ void initDisplay(uint8_t serial[11]) {
   u8g2Fonts.setFont(u8g2_font_helvB24_tf);
 
 
-  char * title PROGMEM = "HB-Dis-EP-42BW";
-  char * asksinpp PROGMEM = "AksinPP";
-  char * version PROGMEM = "V " ASKSIN_PLUS_PLUS_VERSION;
-  char * ser = (char*)serial;
+  const char * title    PROGMEM = "HB-Dis-EP-42BW";
+  const char * asksinpp PROGMEM = "AskSinPP";
+  const char * version  PROGMEM = "V " ASKSIN_PLUS_PLUS_VERSION;
+  const char * ser              = (char*)serial;
 
   u8g2Fonts.setCursor(centerPosition(title), 95);
   u8g2Fonts.print(title);
