@@ -21,10 +21,10 @@
 #include <GxIO/GxIO.h>
 #include "U8G2_FONTS_GFX.h"
 
-#define GxRST_PIN  14
-#define GxBUSY_PIN 11
-#define GxDC_PIN   12
-#define GxCS_PIN   17
+#define GxRST_PIN   9   // PD6
+#define GxBUSY_PIN  3   // PD3
+#define GxDC_PIN   30   // PD4
+#define GxCS_PIN   23   // PC1
 
 GxIO_Class io(SPI, GxCS_PIN, GxDC_PIN, GxRST_PIN);
 GxEPD_Class display(io, GxRST_PIN, GxBUSY_PIN);
@@ -42,24 +42,24 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #include <Register.h>
 #include <MultiChannelDevice.h>
 
-#define CC1101_CS_PIN       4
-#define CC1101_GDO0_PIN     2
-#define CC1101_SCK_PIN      7
-#define CC1101_MOSI_PIN     5
-#define CC1101_MISO_PIN     6
-#define CONFIG_BUTTON_PIN  15
-#define LED_PIN_1          10
-#define LED_PIN_2          13
-#define BTN1_PIN           A7
-#define BTN2_PIN           A6
-#define BTN3_PIN           A5
-#define BTN4_PIN           A4
-#define BTN5_PIN           A3
-#define BTN6_PIN           A2
-#define BTN7_PIN           A1
-#define BTN8_PIN           A0
-#define BTN9_PIN           21
-#define BTN10_PIN          20
+#define CC1101_CS_PIN      10   // PB4
+#define CC1101_GDO0_PIN     6   // PB2
+#define CC1101_SCK_PIN     13   // PB7
+#define CC1101_MOSI_PIN    11   // PB5
+#define CC1101_MISO_PIN    12   // PB6
+#define CONFIG_BUTTON_PIN  31   // PD7
+#define LED_PIN_1           4   // PB0
+#define LED_PIN_2           5   // PB1
+#define BTN1_PIN           14   // PA7
+#define BTN2_PIN           15   // PA6
+#define BTN3_PIN           16   // PA5
+#define BTN4_PIN           17   // PA4
+#define BTN5_PIN           18   // PA3
+#define BTN6_PIN           19   // PA2
+#define BTN7_PIN           20   // PA1
+#define BTN8_PIN           21   // PA0
+#define BTN9_PIN           28   // PC6
+#define BTN10_PIN          29   // PC7
 
 #define TEXT_LENGTH        16
 #define DISPLAY_LINES      10
