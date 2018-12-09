@@ -86,15 +86,17 @@ const struct DeviceInfo PROGMEM devinfo = {
   {0x01, 0x01}                 // Info Bytes
 };
 
+enum Alignments {AlignRight = 0, AlignCenter = 1, AlignLeft = 2};
+
 typedef struct {
-  uint8_t Icon = 0xff;
-  String Text = "";
-  bool showLine = false;
+  uint8_t Alignment = AlignRight;
+  uint8_t Icon      = 0xff;
+  String Text       = "";
+  bool showLine     = false;
 } DisplayLine;
 DisplayLine DisplayLines[DISPLAY_LINES];
 
 struct {
-  bool LeftAligned = false;
   bool Inverted = false;
   uint16_t clFG = GxEPD_BLACK;
   uint16_t clBG = GxEPD_WHITE;
@@ -122,12 +124,11 @@ class DispList0 : public RegList0<Reg0> {
       clear();
       localResetDisable(false);
       displayInverting(false);
-      statusMessageTextAlignmentLeftAligned(false);
       transmitDevTryMax(2);
     }
 };
 
-DEFREGISTER(RemoteReg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90)
+DEFREGISTER(RemoteReg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90, 0x91)
 class RemoteList1 : public RegList1<RemoteReg1> {
   public:
     RemoteList1 (uint16_t addr) : RegList1<RemoteReg1>(addr) {}
@@ -135,8 +136,15 @@ class RemoteList1 : public RegList1<RemoteReg1> {
     bool showLine (uint8_t value) const {
       return this->writeRegister(0x90, 0x01, 0, value & 0xff);
     }
-    uint8_t showLine () const {
+    bool showLine () const {
       return this->readRegister(0x90, 0x01, 0, false);
+    }
+
+    bool Alignment (uint8_t value) const {
+      return this->writeRegister(0x91, value & 0xff);
+    }
+    uint8_t Alignment () const {
+      return this->readRegister(0x91, 0);
     }
 
     bool TEXT1 (uint8_t value[TEXT_LENGTH]) const {
@@ -176,6 +184,7 @@ class RemoteList1 : public RegList1<RemoteReg1> {
       //aesActive(false);
       uint8_t initValues[TEXT_LENGTH] = {32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32};
       showLine(false);
+      Alignment(AlignRight);
       //TEXT1(initValues);
       //TEXT2(initValues);
     }
@@ -203,10 +212,20 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
       if (number() < 11) {
         List1Texts[(number() - 1)  * 2] = this->getList1().TEXT1();
         List1Texts[((number() - 1) * 2) + 1] = this->getList1().TEXT2();
+
+        bool somethingChanged = (
+          DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
+          DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
+        );
+        
         DisplayLines[(number() - 1)].showLine = this->getList1().showLine();
+        DisplayLines[(number() - 1)].Alignment = this->getList1().Alignment();
         DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINTLN(this->getList1().TEXT1());
         DDEC(number()); DPRINT(F(" - TEXT2 = ")); DPRINTLN(this->getList1().TEXT2());
         DDEC(number()); DPRINT(F(" - Line  = ")); DDECLN(this->getList1().showLine());
+        DDEC(number()); DPRINT(F(" - Align = ")); DDECLN(this->getList1().Alignment());
+
+       // if (!runSetup && somethingChanged) mustUpdateDisplay = true;
       }
     }
 
@@ -225,6 +244,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
 
     bool process (const ActionCommandMsg& msg) {
       static bool getText = false;
+      static bool gotIcon = false;
       String Text = "";
       for (int i = 0; i < msg.len(); i++) {
         command[commandIdx] = msg.value(i);
@@ -261,11 +281,13 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
 
             if (command[i] == MSG_ICON_KEY) {
               DisplayLines[currentLine].Icon = command[i + 1] - 0x80;
+              gotIcon = true;
             }
 
             if (command[i] == AS_ACTION_COMMAND_EOL) {
               //DPRINT("EOL DETECTED. currentLine = ");DDECLN(currentLine);
-              //if (i > 1)
+              if (!gotIcon) DisplayLines[currentLine].Icon = 0xff;
+              gotIcon = false;
               currentLine++;
               Text = "";
               getText = false;
@@ -368,7 +390,6 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
     virtual void configChanged () {
       DPRINTLN(F("CONFIG LIST0 CHANGED"));
       DPRINT(F("displayInverting                      : ")); DDECLN(this->getList0().displayInverting());
-      DPRINT(F("statusMessageTextAlignmentLeftAligned : ")); DDECLN(this->getList0().statusMessageTextAlignmentLeftAligned());
 
       if (this->getList0().displayInverting()) {
         DisplayConfig.clFG = GxEPD_WHITE;
@@ -378,10 +399,8 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
         DisplayConfig.clBG = GxEPD_WHITE;
       }
 
-      bool somethingChanged = (DisplayConfig.LeftAligned != this->getList0().statusMessageTextAlignmentLeftAligned() ||
-                               DisplayConfig.Inverted != this->getList0().displayInverting());
+      bool somethingChanged = (DisplayConfig.Inverted != this->getList0().displayInverting());
 
-      DisplayConfig.LeftAligned = this->getList0().statusMessageTextAlignmentLeftAligned();
       DisplayConfig.Inverted = this->getList0().displayInverting();
 
       if (!runSetup && somethingChanged) mustUpdateDisplay = true;
@@ -509,6 +528,8 @@ void updateDisplay() {
   display.fillScreen(DisplayConfig.clBG);
 
   for (uint16_t i = 0; i < 10; i++) {
+    if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), DisplayConfig.clFG);
+
     DisplayLines[i].Text.replace("{", "ä");
     DisplayLines[i].Text.replace("|", "ö");
     DisplayLines[i].Text.replace("}", "ü");
@@ -518,19 +539,31 @@ void updateDisplay() {
     DisplayLines[i].Text.replace("_", "ß");
     DisplayLines[i].Text.replace("'", "=");
     DisplayLines[i].Text.trim();
-    uint16_t left = (DisplayConfig.LeftAligned == true) ? 40 : (display.width() - 40 -  u8g2Fonts.getUTF8Width((DisplayLines[i].Text).c_str()));
-    u8g2Fonts.setCursor(left, (i * 40) + 30);
-    u8g2Fonts.print(DisplayLines[i].Text);
-
-    if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), DisplayConfig.clFG);
 
     uint8_t icon_number = DisplayLines[i].Icon;
-    if (icon_number != 255) {
-      if (DisplayConfig.LeftAligned == true)
-        display.drawExampleBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, (24 - ( Icons[icon_number].height / 2)) + (i * 40) - 4, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
-      else
-        display.drawExampleBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , (24 - ( Icons[icon_number].height / 2)) + (i * 40) - 4, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
+    uint16_t icon_top = (24 - ( Icons[icon_number].height / 2)) + (i * 40) - 4;
+
+    uint16_t leftTextPos = 0xffff;
+    switch (DisplayLines[i].Alignment) {
+      case AlignLeft:
+        leftTextPos = 40;
+        if (icon_number != 255) display.drawExampleBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
+        break;
+      case AlignCenter:
+        leftTextPos = (display.width() / 2) - (u8g2Fonts.getUTF8Width((DisplayLines[i].Text).c_str()) / 2);
+        if (icon_number != 255) {
+          leftTextPos -= ((Icons[icon_number].width  / 2) + 4);
+          display.drawExampleBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width((DisplayLines[i].Text).c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
+        }
+        break;
+    case AlignRight: default:
+        leftTextPos = display.width() - 40 -  u8g2Fonts.getUTF8Width((DisplayLines[i].Text).c_str());
+        if (icon_number != 255) display.drawExampleBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
+        break;
     }
+
+    u8g2Fonts.setCursor(leftTextPos, (i * 40) + 30);
+    u8g2Fonts.print(DisplayLines[i].Text);
   }
 }
 
