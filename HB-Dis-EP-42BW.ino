@@ -50,16 +50,16 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define CONFIG_BUTTON_PIN  31   // PD7
 #define LED_PIN_1           4   // PB0
 #define LED_PIN_2           5   // PB1
-#define BTN1_PIN           14   // PA7
-#define BTN2_PIN           15   // PA6
-#define BTN3_PIN           16   // PA5
-#define BTN4_PIN           17   // PA4
-#define BTN5_PIN           18   // PA3
-#define BTN6_PIN           19   // PA2
-#define BTN7_PIN           20   // PA1
-#define BTN8_PIN           21   // PA0
-#define BTN9_PIN           28   // PC6
-#define BTN10_PIN          29   // PC7
+#define BTN1_PIN           21   // PA0
+#define BTN2_PIN           20   // PA1
+#define BTN3_PIN           19   // PA2
+#define BTN4_PIN           18   // PA3
+#define BTN5_PIN           17   // PA4
+#define BTN6_PIN           16   // PA5
+#define BTN7_PIN           15   // PA6
+#define BTN8_PIN           14   // PA7
+#define BTN9_PIN           29   // PC7
+#define BTN10_PIN          28   // PC6
 
 #define TEXT_LENGTH        16
 #define DISPLAY_LINES      10
