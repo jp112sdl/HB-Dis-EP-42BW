@@ -500,7 +500,7 @@ Wire Wire Line
 Text Notes 7000 7100 0    60   ~ 0
 License: CC BY-NC-SA 3.0
 Text Notes 8150 7650 0    60   ~ 0
-Oct. 2018
+Dec. 2018
 Text Label 8500 2625 0    60   ~ 0
 GDO0
 Wire Wire Line
@@ -620,8 +620,6 @@ NoConn ~ 6150 3650
 NoConn ~ 6150 3750
 NoConn ~ 6150 4350
 NoConn ~ 6150 4650
-NoConn ~ 4150 2250
-NoConn ~ 4150 1850
 $Comp
 L Conn_01x08 J4
 U 1 1 5C0CD490
@@ -1050,4 +1048,55 @@ F 3 "" H 5350 6500 50  0001 C CNN
 	1    5350 6500
 	-1   0    0    -1  
 $EndComp
+$Comp
+L Resonator Y1
+U 1 1 5C16C97D
+P 3825 2050
+F 0 "Y1" H 3825 2275 50  0000 C CNN
+F 1 "Resonator" H 3825 2200 50  0000 C CNN
+F 2 "Resonators:Resonator_SMD_muRata_TPSKA-3pin_7.9x3.8mm_HandSoldering" H 3800 2050 50  0001 C CNN
+F 3 "" H 3800 2050 50  0001 C CNN
+	1    3825 2050
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	3400 2250 4150 2250
+Wire Wire Line
+	3825 2250 3825 2200
+Wire Wire Line
+	3400 1850 4150 1850
+Wire Wire Line
+	3825 1850 3825 1900
+$Comp
+L R R4
+U 1 1 5C16CD7A
+P 3400 2050
+F 0 "R4" V 3480 2050 50  0000 C CNN
+F 1 "1M" V 3400 2050 50  0000 C CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 3330 2050 50  0001 C CNN
+F 3 "" H 3400 2050 50  0001 C CNN
+	1    3400 2050
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR025
+U 1 1 5C16CF92
+P 3575 2350
+F 0 "#PWR025" H 3575 2100 50  0001 C CNN
+F 1 "GND" H 3575 2200 50  0000 C CNN
+F 2 "" H 3575 2350 50  0001 C CNN
+F 3 "" H 3575 2350 50  0001 C CNN
+	1    3575 2350
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3400 1850 3400 1900
+Connection ~ 3825 1850
+Wire Wire Line
+	3400 2200 3400 2250
+Connection ~ 3825 2250
+Wire Wire Line
+	3625 2050 3575 2050
+Wire Wire Line
+	3575 2050 3575 2350
 $EndSCHEMATC
