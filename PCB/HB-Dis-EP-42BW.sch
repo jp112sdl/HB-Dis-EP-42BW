@@ -579,25 +579,25 @@ Wire Wire Line
 Wire Wire Line
 	6150 3950 6550 3950
 Text Label 6550 2150 2    60   ~ 0
-BTN1
-Text Label 6550 2050 2    60   ~ 0
-BTN2
-Text Label 6550 1950 2    60   ~ 0
-BTN3
-Text Label 6550 1850 2    60   ~ 0
-BTN4
-Text Label 6550 1750 2    60   ~ 0
-BTN5
-Text Label 6550 1650 2    60   ~ 0
-BTN6
-Text Label 6550 1550 2    60   ~ 0
-BTN7
-Text Label 6550 1450 2    60   ~ 0
 BTN8
+Text Label 6550 2050 2    60   ~ 0
+BTN7
+Text Label 6550 1950 2    60   ~ 0
+BTN6
+Text Label 6550 1850 2    60   ~ 0
+BTN5
+Text Label 6550 1750 2    60   ~ 0
+BTN4
+Text Label 6550 1650 2    60   ~ 0
+BTN3
+Text Label 6550 1550 2    60   ~ 0
+BTN2
+Text Label 6550 1450 2    60   ~ 0
+BTN1
 Text Label 6550 3850 2    60   ~ 0
-BTN9
-Text Label 6550 3950 2    60   ~ 0
 BTN10
+Text Label 6550 3950 2    60   ~ 0
+BTN9
 Text Label 6550 2350 2    60   ~ 0
 LED1
 Text Label 6550 2450 2    60   ~ 0
