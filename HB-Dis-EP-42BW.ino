@@ -11,7 +11,7 @@
 // #define USE_HW_SERIAL
 // #define NDEBUG
 // #define NDISPLAY
-#define USE_CC1101_ALT_FREQ_86835  //when using 'bad' cc1101 module
+// #define USE_CC1101_ALT_FREQ_86835  //when using 'bad' cc1101 module
 
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
