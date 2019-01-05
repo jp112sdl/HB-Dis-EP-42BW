@@ -529,16 +529,16 @@ void updateDisplay() {
 
   for (uint16_t i = 0; i < 10; i++) {
     if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), DisplayConfig.clFG);
-
-    DisplayLines[i].Text.replace("{", "ä");
-    DisplayLines[i].Text.replace("|", "ö");
-    DisplayLines[i].Text.replace("}", "ü");
-    DisplayLines[i].Text.replace("[", "Ä");
-    DisplayLines[i].Text.replace("#", "Ö");
-    DisplayLines[i].Text.replace("$", "Ü");
-    DisplayLines[i].Text.replace("_", "ß");
-    DisplayLines[i].Text.replace("'", "=");
     DisplayLines[i].Text.trim();
+    String viewText = DisplayLines[i].Text;
+    viewText.replace("{", "ä");
+    viewText.replace("|", "ö");
+    viewText.replace("}", "ü");
+    viewText.replace("[", "Ä");
+    viewText.replace("#", "Ö");
+    viewText.replace("$", "Ü");
+    viewText.replace("~", "ß");
+    viewText.replace("'", "=");
 
     uint8_t icon_number = DisplayLines[i].Icon;
     uint16_t icon_top = (24 - ( Icons[icon_number].height / 2)) + (i * 40) - 4;
