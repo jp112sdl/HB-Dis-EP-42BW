@@ -1,6 +1,6 @@
 # HB-Dis-EP-42BW
 
-![img](Images/IMG_9179.jpg)
+![img](Images/IMG_9178.jpg)
 
 ## Gehäuse
 ### Stand
