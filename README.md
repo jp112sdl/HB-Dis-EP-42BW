@@ -15,7 +15,19 @@
 - 2x 2fach AAA Batteriehalter (werden parallel betrieben; passte am besten ins [Gehäuse](https://github.com/jp112sdl/HB-Dis-EP-42BW/blob/master/Images/IMG_9181.jpg))    
 
 ## Arduino
-
+- [MCUDude/MightyCore Board](https://github.com/MCUdude/MightyCore)-Unterstützung für den 1284P
+  - Pinout: Standard
+  - Clock: 8MHz external
+  - BOD: Disabled
+  - Compiler LTO: Disabled
+  - Variant: 1284P
+- Bibliotheken:  
+  - [AskSinPP](https://github.com/pa-pa/AskSinPP) (master-Branch verwenden!)
+  - [Low-Power](https://github.com/rocketscream/Low-Power)
+  - [EnableInterrupt](https://github.com/GreyGnome/EnableInterrupt)
+  - [GxEPD](https://github.com/ZinggJM/GxEPD) 
+  - [Adafruit-GFX](https://github.com/adafruit/Adafruit-GFX-Library)
+  - [U8g2_for_Adafruit_GFX](https://github.com/olikraus/U8g2_for_Adafruit_GFX)
 
 ## Gehäuse
 ### Stand
