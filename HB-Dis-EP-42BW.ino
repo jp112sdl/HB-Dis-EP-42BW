@@ -4,7 +4,7 @@
 // 2018-12-01 jp112sdl Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
 //- -----------------------------------------------------------------------------------------------------------------------
 
-// use Arduino IDE Board Setting: BOBUINO Layout
+// use Arduino IDE Board Setting: STANDARD Layout
 
 // define this to read the device id, serial and device type from bootloader section
 // #define USE_OTA_BOOTLOADER
@@ -20,10 +20,10 @@
 #include <GxIO/GxIO.h>
 #include "U8G2_FONTS_GFX.h"
 
-#define GxRST_PIN   9
-#define GxBUSY_PIN  3
-#define GxDC_PIN   30
-#define GxCS_PIN   23
+#define GxRST_PIN  14
+#define GxBUSY_PIN 11
+#define GxDC_PIN   12
+#define GxCS_PIN   17
 
 GxIO_Class io(SPI, GxCS_PIN, GxDC_PIN, GxRST_PIN);
 GxEPD_Class display(io, GxRST_PIN, GxBUSY_PIN);
@@ -41,24 +41,24 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #include <Register.h>
 #include <MultiChannelDevice.h>
 
-#define CC1101_CS_PIN      10
-#define CC1101_GDO0_PIN     6
-#define CC1101_SCK_PIN     13
-#define CC1101_MOSI_PIN    11
-#define CC1101_MISO_PIN    12
-#define CONFIG_BUTTON_PIN  31
-#define LED_PIN_1           4
-#define LED_PIN_2           5
-#define BTN1_PIN           14
-#define BTN2_PIN           15
-#define BTN3_PIN           16
-#define BTN4_PIN           17
-#define BTN5_PIN           18
-#define BTN6_PIN           19
-#define BTN7_PIN           20
-#define BTN8_PIN           21
-#define BTN9_PIN           28
-#define BTN10_PIN          29
+#define CC1101_CS_PIN       4
+#define CC1101_GDO0_PIN     2
+#define CC1101_SCK_PIN      7
+#define CC1101_MOSI_PIN     5
+#define CC1101_MISO_PIN     6
+#define CONFIG_BUTTON_PIN  15
+#define LED_PIN_1          10
+#define LED_PIN_2          13
+#define BTN1_PIN           A7
+#define BTN2_PIN           A6
+#define BTN3_PIN           A5
+#define BTN4_PIN           A4
+#define BTN5_PIN           A3
+#define BTN6_PIN           A2
+#define BTN7_PIN           A1
+#define BTN8_PIN           A0
+#define BTN9_PIN           21
+#define BTN10_PIN          20
 
 #define TEXT_LENGTH        16
 #define DISPLAY_LINES      10
@@ -441,16 +441,16 @@ static void isr10 () {
 }
 
 void initISR() {
-  if ( digitalPinToInterrupt(BTN1_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN1_PIN, isr1, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN1_PIN), isr1, CHANGE);
-  if ( digitalPinToInterrupt(BTN2_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN2_PIN, isr2, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN2_PIN), isr2, CHANGE);
-  if ( digitalPinToInterrupt(BTN3_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN3_PIN, isr3, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN3_PIN), isr3, CHANGE);
-  if ( digitalPinToInterrupt(BTN4_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN4_PIN, isr4, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN4_PIN), isr4, CHANGE);
-  if ( digitalPinToInterrupt(BTN5_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN5_PIN, isr5, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN5_PIN), isr5, CHANGE);
-  if ( digitalPinToInterrupt(BTN6_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN6_PIN, isr6, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN6_PIN), isr6, CHANGE);
-  if ( digitalPinToInterrupt(BTN7_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN7_PIN, isr7, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN7_PIN), isr7, CHANGE);
-  if ( digitalPinToInterrupt(BTN8_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN8_PIN, isr8, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN8_PIN), isr8, CHANGE);
-  if ( digitalPinToInterrupt(BTN9_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN9_PIN, isr9, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN9_PIN), isr9, CHANGE);
-  if ( digitalPinToInterrupt(BTN10_PIN) == NOT_AN_INTERRUPT ) enableInterrupt(BTN10_PIN, isr10, CHANGE); else attachInterrupt(digitalPinToInterrupt(BTN10_PIN), isr10, CHANGE);
+  enableInterrupt(BTN1_PIN, isr1, CHANGE);
+  enableInterrupt(BTN2_PIN, isr2, CHANGE);
+  enableInterrupt(BTN3_PIN, isr3, CHANGE);
+  enableInterrupt(BTN4_PIN, isr4, CHANGE);
+  enableInterrupt(BTN5_PIN, isr5, CHANGE);
+  enableInterrupt(BTN6_PIN, isr6, CHANGE);
+  enableInterrupt(BTN7_PIN, isr7, CHANGE);
+  enableInterrupt(BTN8_PIN, isr8, CHANGE);
+  enableInterrupt(BTN9_PIN, isr9, CHANGE);
+  enableInterrupt(BTN10_PIN, isr10, CHANGE);
 }
 
 void setup () {
