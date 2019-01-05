@@ -11,6 +11,7 @@
 // #define USE_HW_SERIAL
 // #define NDEBUG
 // #define NDISPLAY
+#define USE_CC1101_ALT_FREQ_86835  //when using 'bad' cc1101 module
 
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
@@ -110,9 +111,33 @@ bool runSetup          = true;
 */
 typedef AvrSPI<CC1101_CS_PIN, CC1101_MOSI_PIN, CC1101_MISO_PIN, CC1101_SCK_PIN> SPIType;
 typedef Radio<SPIType, CC1101_GDO0_PIN> RadioType;
-typedef DualStatusLed<LED_PIN_1, LED_PIN_2> LedType;
-typedef AskSin<LedType, BatterySensor, RadioType> Hal;
-Hal hal;
+typedef StatusLed<LED_PIN_1> LedType;
+typedef StatusLed<LED_PIN_2> DisplayWorkingLedType;
+
+typedef AskSin<LedType, BatterySensor, RadioType> BaseHal;
+
+class Hal: public BaseHal {
+  public:
+    void init(const HMID& id) {
+      BaseHal::init(id);
+      battery.init(seconds2ticks(60UL * 60 * 21), sysclock); //battery measure once an day
+      battery.low(24);
+      battery.critical(22);
+#ifdef USE_CC1101_ALT_FREQ_86835
+      // 2165E8 == 868.35 MHz
+      radio.initReg(CC1101_FREQ2, 0x21);
+      radio.initReg(CC1101_FREQ1, 0x65);
+      radio.initReg(CC1101_FREQ0, 0xE8);
+#endif
+      activity.stayAwake(seconds2ticks(15));
+    }
+
+    bool runready () {
+      return sysclock.runready() || BaseHal::runready();
+    }
+} hal;
+
+DisplayWorkingLedType DisplayWorkingLed;
 BurstDetector<Hal> bd(hal);
 
 DEFREGISTER(Reg0, MASTERID_REGS, DREG_LOCALRESETDISABLE, DREG_DISPLAY, DREG_TRANSMITTRYMAX)
@@ -182,11 +207,12 @@ class RemoteList1 : public RegList1<RemoteReg1> {
     void defaults () {
       clear();
       //aesActive(false);
-      uint8_t initValues[TEXT_LENGTH] = {32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32};
+      uint8_t initValues[TEXT_LENGTH];
+      memset(initValues, 0x00, TEXT_LENGTH);
+      TEXT1(initValues);
+      TEXT2(initValues);
       showLine(false);
       Alignment(AlignRight);
-      //TEXT1(initValues);
-      //TEXT2(initValues);
     }
 };
 
@@ -214,10 +240,10 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
         List1Texts[((number() - 1) * 2) + 1] = this->getList1().TEXT2();
 
         bool somethingChanged = (
-          DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
-          DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
-        );
-        
+                                  DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
+                                  DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
+                                );
+
         DisplayLines[(number() - 1)].showLine = this->getList1().showLine();
         DisplayLines[(number() - 1)].Alignment = this->getList1().Alignment();
         DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINTLN(this->getList1().TEXT1());
@@ -225,7 +251,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
         DDEC(number()); DPRINT(F(" - Line  = ")); DDECLN(this->getList1().showLine());
         DDEC(number()); DPRINT(F(" - Align = ")); DDECLN(this->getList1().Alignment());
 
-       // if (!runSetup && somethingChanged) mustUpdateDisplay = true;
+        // if (!runSetup && somethingChanged) mustUpdateDisplay = true;
       }
     }
 
@@ -244,7 +270,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
 
     bool process (const ActionCommandMsg& msg) {
       static bool getText = false;
-      static bool gotIcon = false;
+      //static bool gotIcon = false;
       String Text = "";
       for (int i = 0; i < msg.len(); i++) {
         command[commandIdx] = msg.value(i);
@@ -259,7 +285,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
             DHEX(command[i]); DPRINT(" ");
 
             if (getText) {
-              if (command[i] >= 0x20 && command[i] < 0x80) {
+              if ((command[i] >= 0x20 && command[i] < 0x80) || command[i] == 0xb0 ) {
                 char c = command[i];
                 Text += c;
               } else {
@@ -281,13 +307,13 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
 
             if (command[i] == MSG_ICON_KEY) {
               DisplayLines[currentLine].Icon = command[i + 1] - 0x80;
-              gotIcon = true;
+              //gotIcon = true;
             }
 
             if (command[i] == AS_ACTION_COMMAND_EOL) {
               //DPRINT("EOL DETECTED. currentLine = ");DDECLN(currentLine);
-              if (!gotIcon) DisplayLines[currentLine].Icon = 0xff;
-              gotIcon = false;
+              //if (!gotIcon) DisplayLines[currentLine].Icon = 0xff;
+              //gotIcon = false;
               currentLine++;
               Text = "";
               getText = false;
@@ -477,18 +503,18 @@ void setup () {
   sdev.disp8Channel().button().init(BTN8_PIN);
   sdev.disp9Channel().button().init(BTN9_PIN);
   sdev.disp10Channel().button().init(BTN10_PIN);
-  buttonISR(cfgBtn, CONFIG_BUTTON_PIN);
   initISR();
+  buttonISR(cfgBtn, CONFIG_BUTTON_PIN);
   bd.enable(sysclock);
-  hal.activity.stayAwake(seconds2ticks(15));
-  hal.battery.low(LOWBAT_VOLTAGE);
-  // measure battery every 12 hours
-  hal.battery.init(seconds2ticks(60UL * 60 * 12 * 0.88), sysclock);
   sdev.initDone();
   DDEVINFO(sdev);
   sdev.disp1Channel().changed(true);
+  DisplayWorkingLed.init();
+
 #ifndef NDISPLAY
+  DisplayWorkingLed.ledOn();
   display.drawPaged(showInitDisplay);
+  DisplayWorkingLed.ledOff();
 #endif
   runSetup = false;
 }
@@ -497,6 +523,9 @@ void loop() {
   bool worked = hal.runready();
   bool poll = sdev.pollRadio();
   if ( worked == false && poll == false ) {
+    if (hal.battery.critical()) {
+      hal.activity.sleepForever(hal);
+    }
 #ifndef NDISPLAY
     updateDisplay(mustUpdateDisplay);
 #endif
@@ -516,7 +545,9 @@ void showInitDisplay() {
 void updateDisplay(bool doit) {
   if (doit) {
     mustUpdateDisplay = false;
+    DisplayWorkingLed.ledOn();
     display.drawPaged(updateDisplay);
+    DisplayWorkingLed.ledOff();
   }
 }
 
