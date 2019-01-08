@@ -270,7 +270,6 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
 
     bool process (const ActionCommandMsg& msg) {
       static bool getText = false;
-      static bool gotIcon = false;
       String Text = "";
       for (int i = 0; i < msg.len(); i++) {
         command[commandIdx] = msg.value(i);
@@ -296,6 +295,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
             }
 
             if (command[i] == MSG_TEXT_KEY) {
+              DisplayLines[currentLine].Icon = 0xff;  //clear icon
               if (command[i + 1] < 0x80) {
                 getText = true;
               } else {
@@ -307,13 +307,10 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
 
             if (command[i] == MSG_ICON_KEY) {
               DisplayLines[currentLine].Icon = command[i + 1] - 0x80;
-              gotIcon = true;
             }
 
             if (command[i] == AS_ACTION_COMMAND_EOL) {
               //DPRINT("EOL DETECTED. currentLine = ");DDECLN(currentLine);
-              if (!gotIcon) DisplayLines[currentLine].Icon = 0xff;
-              gotIcon = false;
               currentLine++;
               Text = "";
               getText = false;
