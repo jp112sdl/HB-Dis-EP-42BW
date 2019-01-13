@@ -86,7 +86,7 @@ L C C6
 U 1 1 5AD31EC8
 P 8300 1675
 F 0 "C6" H 8325 1775 50  0000 L CNN
-F 1 "100n" H 8325 1575 50  0000 L CNN
+F 1 "10u" H 8325 1575 50  0000 L CNN
 F 2 "Capacitors_SMD:C_0603_HandSoldering" H 8338 1525 50  0001 C CNN
 F 3 "" H 8300 1675 50  0001 C CNN
 	1    8300 1675
@@ -592,7 +592,7 @@ BTN3
 Text Label 6550 1550 2    60   ~ 0
 BTN2
 Text Label 6550 1450 2    60   ~ 0
-BTN1
+BI_MEAS
 Text Label 6550 3850 2    60   ~ 0
 BTN10
 Text Label 6550 3950 2    60   ~ 0
@@ -611,13 +611,6 @@ Text Label 6550 4550 2    60   ~ 0
 GxDC
 Text Label 6550 4750 2    60   ~ 0
 GxRST
-NoConn ~ 6150 2650
-NoConn ~ 6150 3250
-NoConn ~ 6150 3450
-NoConn ~ 6150 3550
-NoConn ~ 6150 3650
-NoConn ~ 6150 3750
-NoConn ~ 6150 4350
 NoConn ~ 6150 4650
 $Comp
 L Conn_01x08 J4
@@ -631,13 +624,13 @@ F 3 "" H 9650 4400 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9450 4500 9000 4500
+	9000 4500 10000 4500
 Wire Wire Line
-	9000 4600 9450 4600
+	9000 4600 10000 4600
 Wire Wire Line
-	9450 4700 9000 4700
+	9000 4700 10000 4700
 Wire Wire Line
-	9000 4800 9450 4800
+	9000 4800 10000 4800
 Text Label 9000 4500 0    60   ~ 0
 GxCS
 Text Label 9000 4600 0    60   ~ 0
@@ -658,7 +651,7 @@ F 3 "" H 8750 4200 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9450 4200 8750 4200
+	8750 4200 10000 4200
 $Comp
 L VCC #PWR017
 U 1 1 5C0CDD82
@@ -675,7 +668,7 @@ L C C8
 U 1 1 5C0CE03E
 P 8750 4000
 F 0 "C8" H 8775 4100 50  0000 L CNN
-F 1 "100n" H 8775 3900 50  0000 L CNN
+F 1 "10u" H 8775 3900 50  0000 L CNN
 F 2 "Capacitors_SMD:C_0603_HandSoldering" H 8788 3850 50  0001 C CNN
 F 3 "" H 8750 4000 50  0001 C CNN
 	1    8750 4000
@@ -699,7 +692,7 @@ Wire Wire Line
 Wire Wire Line
 	9300 3800 9300 4100
 Wire Wire Line
-	9300 4100 9450 4100
+	9300 4100 10000 4100
 Text Notes 9550 3900 0    60   ~ 0
 ePaper
 NoConn ~ 9800 2225
@@ -865,9 +858,9 @@ F 3 "" H 1450 7150 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9450 4400 9000 4400
+	9000 4400 10000 4400
 Wire Wire Line
-	9000 4300 9450 4300
+	9000 4300 10000 4300
 Text Label 9000 4300 0    60   ~ 0
 MOSI
 Text Label 9000 4400 0    60   ~ 0
@@ -1168,4 +1161,206 @@ F 3 "" H 2025 2975 50  0001 C CNN
 	1    2025 2975
 	1    0    0    -1  
 $EndComp
+Wire Wire Line
+	6150 3450 6550 3450
+Wire Wire Line
+	6550 3550 6150 3550
+Wire Wire Line
+	6150 3650 6550 3650
+Wire Wire Line
+	6550 3750 6150 3750
+Text Label 6550 3450 2    60   ~ 0
+GPIO0
+Text Label 6550 3550 2    60   ~ 0
+GPIO1
+Text Label 6550 3650 2    60   ~ 0
+GPIO2
+Text Label 6550 3750 2    60   ~ 0
+GPIO3
+$Comp
+L Conn_01x06 J7
+U 1 1 5C3A1225
+P 3675 6950
+F 0 "J7" H 3675 7250 50  0000 C CNN
+F 1 "GeneralPurpose" H 3675 6550 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x06_Pitch1.27mm" H 3675 6950 50  0001 C CNN
+F 3 "" H 3675 6950 50  0001 C CNN
+	1    3675 6950
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR029
+U 1 1 5C3A1499
+P 3350 7300
+F 0 "#PWR029" H 3350 7050 50  0001 C CNN
+F 1 "GND" H 3350 7150 50  0000 C CNN
+F 2 "" H 3350 7300 50  0001 C CNN
+F 3 "" H 3350 7300 50  0001 C CNN
+	1    3350 7300
+	1    0    0    -1  
+$EndComp
+$Comp
+L VCC #PWR030
+U 1 1 5C3A150D
+P 3350 6700
+F 0 "#PWR030" H 3350 6550 50  0001 C CNN
+F 1 "VCC" H 3350 6850 50  0000 C CNN
+F 2 "" H 3350 6700 50  0001 C CNN
+F 3 "" H 3350 6700 50  0001 C CNN
+	1    3350 6700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3350 7300 3350 7250
+Wire Wire Line
+	3350 7250 3475 7250
+Wire Wire Line
+	3350 6700 3350 6750
+Wire Wire Line
+	3350 6750 3475 6750
+Wire Wire Line
+	3475 6850 3150 6850
+Text Label 3150 6850 0    60   ~ 0
+GPIO0
+Wire Wire Line
+	3475 6950 3150 6950
+Wire Wire Line
+	3475 7050 3150 7050
+Wire Wire Line
+	3150 7150 3475 7150
+Text Label 3150 6950 0    60   ~ 0
+GPIO1
+Text Label 3150 7050 0    60   ~ 0
+GPIO2
+Text Label 3150 7150 0    60   ~ 0
+GPIO3
+$Comp
+L Conn_01x08 J5
+U 1 1 5C3A255F
+P 10200 4400
+F 0 "J5" H 10200 4800 50  0000 C CNN
+F 1 "ePaper_TestPoints" H 10200 3900 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x08_Pitch2.54mm" H 10200 4400 50  0001 C CNN
+F 3 "" H 10200 4400 50  0001 C CNN
+	1    10200 4400
+	1    0    0    -1  
+$EndComp
+Connection ~ 9450 4100
+Connection ~ 9450 4200
+Connection ~ 9450 4300
+Connection ~ 9450 4400
+Connection ~ 9450 4500
+Connection ~ 9450 4600
+Connection ~ 9450 4700
+Connection ~ 9450 4800
+$Comp
+L Q_NMOS_GSD Q1
+U 1 1 5C3A3284
+P 3200 5400
+F 0 "Q1" H 3400 5450 50  0000 L CNN
+F 1 "IRLML6344" H 3400 5350 50  0000 L CNN
+F 2 "TO_SOT_Packages_SMD:SOT-23" H 3400 5500 50  0001 C CNN
+F 3 "" H 3200 5400 50  0001 C CNN
+	1    3200 5400
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R8
+U 1 1 5C3A3483
+P 3300 4950
+F 0 "R8" V 3380 4950 50  0000 C CNN
+F 1 "8.2" V 3300 4950 50  0000 C CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 3230 4950 50  0001 C CNN
+F 3 "" H 3300 4950 50  0001 C CNN
+	1    3300 4950
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R7
+U 1 1 5C3A3574
+P 3300 4550
+F 0 "R7" V 3380 4550 50  0000 C CNN
+F 1 "8.2" V 3300 4550 50  0000 C CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 3230 4550 50  0001 C CNN
+F 3 "" H 3300 4550 50  0001 C CNN
+	1    3300 4550
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR031
+U 1 1 5C3A369E
+P 3300 5800
+F 0 "#PWR031" H 3300 5550 50  0001 C CNN
+F 1 "GND" H 3300 5650 50  0000 C CNN
+F 2 "" H 3300 5800 50  0001 C CNN
+F 3 "" H 3300 5800 50  0001 C CNN
+	1    3300 5800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3300 5600 3300 5800
+Wire Wire Line
+	3300 5100 3300 5200
+Wire Wire Line
+	3300 4700 3300 4800
+$Comp
+L VCC #PWR032
+U 1 1 5C3A3BF5
+P 3300 4300
+F 0 "#PWR032" H 3300 4150 50  0001 C CNN
+F 1 "VCC" H 3300 4450 50  0000 C CNN
+F 2 "" H 3300 4300 50  0001 C CNN
+F 3 "" H 3300 4300 50  0001 C CNN
+	1    3300 4300
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3300 4300 3300 4400
+$Comp
+L R R6
+U 1 1 5C3A3E02
+P 2900 5600
+F 0 "R6" V 2980 5600 50  0000 C CNN
+F 1 "4k7" V 2900 5600 50  0000 C CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" V 2830 5600 50  0001 C CNN
+F 3 "" H 2900 5600 50  0001 C CNN
+	1    2900 5600
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2525 5400 3000 5400
+Wire Wire Line
+	2900 5450 2900 5400
+Connection ~ 2900 5400
+Wire Wire Line
+	3300 4750 3750 4750
+Connection ~ 3300 4750
+Text Label 2525 5400 0    60   ~ 0
+BI_EN
+Text Label 3750 4750 2    60   ~ 0
+BI_MEAS
+$Comp
+L GND #PWR033
+U 1 1 5C3A45E4
+P 2900 5800
+F 0 "#PWR033" H 2900 5550 50  0001 C CNN
+F 1 "GND" H 2900 5650 50  0000 C CNN
+F 2 "" H 2900 5800 50  0001 C CNN
+F 3 "" H 2900 5800 50  0001 C CNN
+	1    2900 5800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2900 5800 2900 5750
+Text Label 6550 4350 2    60   ~ 0
+BI_EN
+Wire Wire Line
+	6150 2650 6550 2650
+Text Label 6550 2650 2    60   ~ 0
+BTN1
+Text Notes 2450 4975 0    60   ~ 0
+Babbling Idiot \nProtection:\nmeasure battery \nunder load
+Wire Wire Line
+	6150 4350 6550 4350
+NoConn ~ 6150 3250
 $EndSCHEMATC
