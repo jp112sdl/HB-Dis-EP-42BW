@@ -1,6 +1,6 @@
 # HB-Dis-EP-42BW
 
-![img](Images/IMG_9178.jpg)
+![img](Images/IMG_9206.jpg)
 
 ## Parts
 - ATMega **1284P** (für den [Prototypen](https://github.com/jp112sdl/HB-Dis-EP-42BW/blob/master/Images/IMG_9180.jpg) habe ich die [HM-ES-PWMSw1-Pl_GosundSP1-Platine](https://raw.githubusercontent.com/stan23/HM-ES-PMSw1-Pl_GosundSP1/master/Bilder/Platine_V2_bestückt.jpg) missbraucht ^^)
