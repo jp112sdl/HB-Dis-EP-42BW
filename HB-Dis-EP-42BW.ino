@@ -21,10 +21,10 @@
 #include <GxIO/GxIO.h>
 #include "U8G2_FONTS_GFX.h"
 
-#define GxRST_PIN   9   // PD6
-#define GxBUSY_PIN  3   // PD3
-#define GxDC_PIN   30   // PD4
-#define GxCS_PIN   23   // PC1
+#define GxRST_PIN  14   // PD6
+#define GxBUSY_PIN 11   // PD3
+#define GxDC_PIN   12   // PD4
+#define GxCS_PIN   18   // PC2
 
 GxIO_Class io(SPI, GxCS_PIN, GxDC_PIN, GxRST_PIN);
 GxEPD_Class display(io, GxRST_PIN, GxBUSY_PIN);
@@ -42,24 +42,24 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #include <Register.h>
 #include <MultiChannelDevice.h>
 
-#define CC1101_CS_PIN      10   // PB4
-#define CC1101_GDO0_PIN     6   // PB2
-#define CC1101_SCK_PIN     13   // PB7
-#define CC1101_MOSI_PIN    11   // PB5
-#define CC1101_MISO_PIN    12   // PB6
-#define CONFIG_BUTTON_PIN  31   // PD7
-#define LED_PIN_1           4   // PB0
-#define LED_PIN_2           5   // PB1
-#define BTN1_PIN           21   // PA0
-#define BTN2_PIN           20   // PA1
-#define BTN3_PIN           19   // PA2
-#define BTN4_PIN           18   // PA3
-#define BTN5_PIN           17   // PA4
-#define BTN6_PIN           16   // PA5
-#define BTN7_PIN           15   // PA6
-#define BTN8_PIN           14   // PA7
-#define BTN9_PIN           29   // PC7
-#define BTN10_PIN          28   // PC6
+#define CC1101_CS_PIN       4   // PB4
+#define CC1101_GDO0_PIN     2   // PB2
+#define CC1101_SCK_PIN      7   // PB7
+#define CC1101_MOSI_PIN     5   // PB5
+#define CC1101_MISO_PIN     6   // PB6
+#define CONFIG_BUTTON_PIN  15   // PD7
+#define LED_PIN_1           0   // PB0
+#define LED_PIN_2           1   // PB1
+#define BTN1_PIN            3   // PB3
+#define BTN2_PIN           A1   // PA1
+#define BTN3_PIN           A2   // PA2
+#define BTN4_PIN           A3   // PA3
+#define BTN5_PIN           A4   // PA4
+#define BTN6_PIN           A5   // PA5
+#define BTN7_PIN           A6   // PA6
+#define BTN8_PIN           A7   // PA7
+#define BTN9_PIN           23   // PC7
+#define BTN10_PIN          22   // PC6
 
 #define TEXT_LENGTH        16
 #define DISPLAY_LINES      10
