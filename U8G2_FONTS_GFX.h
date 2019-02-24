@@ -11,6 +11,7 @@ class U8G2_FONTS_GFX : public U8G2_FOR_ADAFRUIT_GFX
     {
       begin(gfx);
     };
+    virtual ~U8G2_FONTS_GFX () {}
     void drawPixel(int16_t x, int16_t y, uint16_t color)
     {
       _gfx.drawPixel(x, y, color);
