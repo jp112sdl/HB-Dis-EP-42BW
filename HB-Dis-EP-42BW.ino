@@ -239,10 +239,10 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
         List1Texts[(number() - 1)  * 2] = this->getList1().TEXT1();
         List1Texts[((number() - 1) * 2) + 1] = this->getList1().TEXT2();
 
-        bool somethingChanged = (
-                                  DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
-                                  DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
-                                );
+        //bool somethingChanged = (
+        //                          DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
+        //                          DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
+        //                        );
 
         DisplayLines[(number() - 1)].showLine = this->getList1().showLine();
         DisplayLines[(number() - 1)].Alignment = this->getList1().Alignment();
@@ -263,8 +263,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
       return 0;
     }
 
-    bool process (const Message& msg) {
-      DPRINTLN("process Message");
+    bool process (__attribute__((unused)) const Message& msg) {
       return true;
     }
 
@@ -331,7 +330,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
       return true;
     }
 
-    bool process (const RemoteEventMsg& msg) {
+    bool process (__attribute__((unused)) const RemoteEventMsg& msg) {
       return true;
     }
 
@@ -539,15 +538,6 @@ void showInitDisplay() {
   initDisplay(serial);
 }
 
-void updateDisplay(bool doit) {
-  if (doit) {
-    mustUpdateDisplay = false;
-    DisplayWorkingLed.ledOn();
-    display.drawPaged(updateDisplay);
-    DisplayWorkingLed.ledOff();
-  }
-}
-
 void updateDisplay() {
   u8g2Fonts.setFont(u8g2_font_helvB18_tf);
   u8g2Fonts.setFontMode(1);
@@ -592,6 +582,15 @@ void updateDisplay() {
 
     u8g2Fonts.setCursor(leftTextPos, (i * 40) + 30);
     u8g2Fonts.print(viewText);
+  }
+}
+
+void updateDisplay(bool doit) {
+  if (doit) {
+    mustUpdateDisplay = false;
+    DisplayWorkingLed.ledOn();
+    display.drawPaged(updateDisplay);
+    DisplayWorkingLed.ledOff();
   }
 }
 
