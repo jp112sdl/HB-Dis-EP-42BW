@@ -1,3 +1,6 @@
+#ifndef _HB_ICONS_H_
+#define _HB_ICONS_H_
+
 //https://javl.github.io/image2cpp/
 
 // 'icon0', 23x24px
@@ -216,3 +219,4 @@ void initIcons() {
   Icons[18].height = 24;
 }
 
+#endif
