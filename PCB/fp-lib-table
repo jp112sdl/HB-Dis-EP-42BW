@@ -1,0 +1,8 @@
+(fp_lib_table
+  (lib (name CC1101_module)(type KiCad)(uri "$(KIPRJMOD)/libraries/CC1101_module.pretty")(options "")(descr ""))
+  (lib (name Testpads)(type KiCad)(uri "$(KIPRJMOD)/libraries/Testpads.pretty")(options "")(descr ""))
+  (lib (name CFA-10084)(type KiCad)(uri "$(KIPRJMOD)/libraries/CFA-10084.pretty")(options "")(descr ""))
+  (lib (name Waveshare_ePaper)(type KiCad)(uri "$(KIPRJMOD)/libraries/Waveshare_ePaper.pretty")(options "")(descr ""))
+  (lib (name Resonators)(type KiCad)(uri "$(KIPRJMOD)/libraries/Resonators.pretty")(options "")(descr ""))
+  (lib (name "TQFP Housings")(type KiCad)(uri "$(KIPRJMOD)/libraries/TQFP.pretty")(options "")(descr ""))
+)
