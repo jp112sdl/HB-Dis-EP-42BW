@@ -9,14 +9,14 @@
 
 #### Reichelt
 
-[Bestellliste](https://www.reichelt.de/my/)
+[Bestellliste](https://www.reichelt.de/my/1564026) (ohne die optionalen Bauteile)
 
 Bauteil                  | Bestellnummer    | Anzahl | Kommentar
 ------------------------ | ---------------- | ------ | ---------
 C1                       | X5R-G0603 10/6   |   1    | -
 C2 .. C5, C7             | X7R-G0603 100N   |   5    | -
 C6, C8                   | X7R-G0603 1,0/16 |   2    | -
-D1                       | KTB L-115WEGW    |   1    | -
+D1                       | KBT L-115WEGW    |   1    | -
 R1                       | RND 0603 1 10K   |   1    | -
 R2 .. R3                 | RND 0603 1 330   |   2    | -
 R4                       | RND 0603 1 1,0M  |   1    | -
@@ -27,9 +27,9 @@ SW0                      | JTP-1130         |   1    | optional: Konfigtaster *A
 SW1 .. SW10              | JTP-1130         |  10    | *Achtung, evtl. andere Bauhöhe!*
 U1                       | ATMEGA 1284P-AU  |   1    | -
 Y1                       | CSTCE 8,00       |   1    | -
-Verbinder zum CC1101     | MPE 156-1-032    |   1    | -
-Verbinder zum ePaper     | -    |   1    | -
-Verbinder zur Batterie   | -    |   1    | -
+Verbinder zum CC1101     | MPE 150-1-010    |   1    | -
+Verbinder zum ePaper     | MPE 087-1-010    |   1    | -
+Verbinder zur Batterie   | -    |   1    | optional, kann auch angelötet werden
 
 
 
@@ -37,7 +37,7 @@ Verbinder zur Batterie   | -    |   1    | -
 
 Bauteil                  | Bestellnummer    | Anzahl | Kommentar
 ------------------------ | ---------------- | ------ | ---------
-U3                       | MCP111T-270E/TT  |   1    | optional, Unterspannungsüberwachung
+U3                       | MCP111T-270E/TT  |   1    | optional, Unterspannungserkennung
 
 
 #### Sonstiges
@@ -57,10 +57,10 @@ U2      | CC1101 Funkmodul 868 MHz |   1    | z.B. [eBay](https://www.ebay.de/it
 
 ### Fuses
 Ext:  0xFF
-High: 0xD2
+High: 0xD4
 Low:  0xFF
 
-`C:\Program Files (x86)\Arduino\hardware\tools\avr\bin> .\avrdude -C ..\etc\avrdude.conf -p m1284p -P com7 -c stk500 -U lfuse:w:0xFF:m -U hfuse:w:0xD2:m -U efuse:w:0xFF:m`
+`C:\Program Files (x86)\Arduino\hardware\tools\avr\bin> .\avrdude -C ..\etc\avrdude.conf -p m1284p -P com7 -c stk500 -U lfuse:w:0xFF:m -U hfuse:w:0xD4:m -U efuse:w:0xFF:m`
 
 
 ### Firmware
