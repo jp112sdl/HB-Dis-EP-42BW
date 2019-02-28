@@ -1,6 +1,7 @@
 # HB-Dis-EP-42BW Platine     [![License: CC BY-NC-SA 3.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/3.0/)
 
 
+# Work in Progress - in Bearbeitung...
 
 
 # Hardware
@@ -29,7 +30,7 @@ U1                       | ATMEGA 1284P-AU  |   1    | -
 Y1                       | CSTCE 8,00       |   1    | -
 Verbinder zum CC1101     | MPE 150-1-010    |   1    | -
 Verbinder zum ePaper     | MPE 087-1-010    |   1    | -
-Verbinder zur Batterie   | -    |   1    | optional, kann auch angelötet werden
+Verbinder zur Batterie   | -                |   -    | optional, kann auch angelötet werden
 
 
 
@@ -37,14 +38,15 @@ Verbinder zur Batterie   | -    |   1    | optional, kann auch angelötet werden
 
 Bauteil                  | Bestellnummer    | Anzahl | Kommentar
 ------------------------ | ---------------- | ------ | ---------
-U3                       | MCP111T-270E/TT  |   1    | optional, Unterspannungserkennung
+U3                       | [MCP111T-270E/TT](https://de.farnell.com/microchip/mcp111t-270e-tt/ic-supervisor-2-63v-low-sot-23b/dp/1851877)  |   1    | optional, Unterspannungserkennung
 
 
 #### Sonstiges
 
-Bauteil | Bestellnummer            | Anzahl | Kommentar
-------- | ------------------------ | ------ | ---------
-U2      | CC1101 Funkmodul 868 MHz |   1    | z.B. [eBay](https://www.ebay.de/itm/272455136087)
+Bauteil | Bezeichnung                  | Anzahl | Kommentar
+------- | ---------------------------- | ------ | ---------
+U2      | CC1101 Funkmodul 868 MHz     |   1    | z.B. [eBay](https://www.ebay.de/itm/272455136087)
+Display | 4,2" ePaper mit SPI-Anschluss|   1    | z.B. [EXP-R63-045](https://www.exp-tech.de/new/8289/400x300-4.2-e-ink-display-module)
 
 ~8,3 cm Draht als Antenne
 
@@ -55,10 +57,15 @@ U2      | CC1101 Funkmodul 868 MHz |   1    | z.B. [eBay](https://www.ebay.de/it
 
 # Software
 
-### Fuses
-Ext:  0xFF
-High: 0xD4
-Low:  0xFF
+### Fuses und Lockbits
+
+Fuse     | Wert | Kommentar
+-------- | ---- | ---------
+Extended | 0xFF |
+High     | 0xD4 |
+Low      | 0xFF |
+Lockbits | 0xEF | optional
+
 
 `C:\Program Files (x86)\Arduino\hardware\tools\avr\bin> .\avrdude -C ..\etc\avrdude.conf -p m1284p -P com7 -c stk500 -U lfuse:w:0xFF:m -U hfuse:w:0xD4:m -U efuse:w:0xFF:m`
 
@@ -71,13 +78,12 @@ Low:  0xFF
 # Bauanleitung
 
 Zuerst den ATmega auflöten, die Markierung (kleiner Punkt) muss zur Beschriftung U1 zeigen.
-Danach die Kondensatoren und den Widerstand auflöten.
+Danach den Resonator, die Kondensatoren und Widerstände auflöten.
 
 Mit einem Multimeter messen ob kein Kurzschluss zwischen VCC und GND besteht (mehrere 10 K Widerstand sind okay).
 
-Den ISP Programmieradapter an die Lötaugen des CC1101 anschließen. 
-
-![ISP Anschluss](https://github.com/stan23/HM-ES-PMSw1-Pl_GosundSP1/blob/master/Bilder/Platine_ISP_Beschriftung.jpg)
+Den ISP Programmieradapter an den 6-poligen Anschluss auf der **Rückseite** anschließen.
+Nun kann entweder der Sketch direkt geflasht werden ("Hochladen mit Programmer"), oder zuerst der [Bootloader](https://github.com/TomMajor/AskSinPP_Examples/tree/master/Info/Info_HB-Dis-EP-42BW/bootloader) und dann der eigentliche Sketch über den FTDI-Anschluss.
 
 Pin am ISP-Kabel | Bedeutung
 ---------------- | ----------
@@ -89,16 +95,22 @@ Pin am ISP-Kabel | Bedeutung
 6                | GND
 
 
-
-Anschließend kann das Funkmodul auf der Rückseite aufgelötet werden. Dabei gibt es verschiedene Möglichkeiten:
-- mit Stift- und Buchsenleiste (abnehmbar)
-- mit Stiftleiste
+Anschließend können das Funkmodul, die Taster und die LED eingelötet werden.
 
 An den Antennenanschluss muss noch das 8,3 cm Drahtstück angelötet werden.
 
-Mit einem FTDI USB-seriell-Adapter an den Lötpunkten RX, TX, 3.3 V und GND und mit einem Terminalprogramm kann man die Ausgabe beobachten. Es sollten schon *Ignore...*-Meldungen empfangen und angezeigt werden.
+Mit einem FTDI USB-seriell-Adapter und einem Terminalprogramm kann man die Ausgabe beobachten. Es sollten schon *Ignore...*-Meldungen empfangen und angezeigt werden.
 
+# ToDo
 
+#### Abstände ePaper zu Platine
+#### Höhe der Taster
+#### Konfigtaster
+Orientierung wie die anderen 10 Taster, oder über Kopf.
+#### Ausrichtung LED
+#### Abstandsbolzen
+#### Befestigung im Gehäuse
+#### Batterien 2x AA statt 2x 2x AAA
 
 
 # Bilder
