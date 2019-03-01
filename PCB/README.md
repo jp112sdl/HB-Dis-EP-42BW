@@ -21,7 +21,8 @@ R1                       | RND 0603 1 10K   |   1    | -
 R2 .. R3                 | RND 0603 1 330   |   2    | -
 R4                       | RND 0603 1 1,0M  |   1    | -
 R6                       | RND 0603 1 4,7k  |   1    | optional: für Batteriespannungsmessung unter Last
-R7 .. R8                 | RND 0603 1 8,2   |   2    | optional: für Batteriespannungsmessung unter Last
+R7                       | RND 155HP05 CI   |   1    | optional: für Batteriespannungsmessung unter Last
+R8                       | RND 155HP05 AF   |   1    | optional: für Batteriespannungsmessung unter Last
 Q1                       | IRLML 6344       |   1    | optional: für Batteriespannungsmessung unter Last
 SW0                      | JTP-1130         |   1    | optional: Konfigtaster *Achtung, evtl. andere Bauhöhe!*
 SW1 .. SW10              | JTP-1130         |  10    | *Achtung, evtl. andere Bauhöhe!*
