@@ -18,7 +18,7 @@ C1                       | X5R-G0603 10/6   |   1    | -
 C2 .. C5, C7             | X7R-G0603 100N   |   5    | -
 C6, C8                   | X7R-G0603 1,0/16 |   2    | -
 D1                       | KBT L-115WEGW    |   1    | -
-R1                       | RND 0603 1 10K   |   1    | -
+R1, R5                   | RND 0603 1 10K   |   2    | -
 R2 .. R3                 | RND 0603 1 330   |   2    | -
 R4                       | RND 0603 1 1,0M  |   1    | -
 R6                       | RND 0603 1 4,7k  |   1    | optional: für Batteriespannungsmessung unter Last
