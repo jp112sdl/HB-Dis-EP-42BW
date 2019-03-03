@@ -565,18 +565,19 @@ void updateDisplay() {
     switch (DisplayLines[i].Alignment) {
       case AlignLeft:
         leftTextPos = 40;
-        if (icon_number != 255) display.drawExampleBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
+        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         break;
       case AlignCenter:
         leftTextPos = (display.width() / 2) - (u8g2Fonts.getUTF8Width(viewText.c_str()) / 2);
         if (icon_number != 255) {
           leftTextPos -= ((Icons[icon_number].width  / 2) + 4);
-          display.drawExampleBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
+          display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         }
         break;
-    case AlignRight: default:
+       case AlignRight:
+       default:
         leftTextPos = display.width() - 40 -  u8g2Fonts.getUTF8Width(viewText.c_str());
-        if (icon_number != 255) display.drawExampleBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG);
+        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         break;
     }
 
