@@ -25,13 +25,15 @@ R6                       | RND 0603 1 4,7k  |   1    | optional: für Batteriesp
 R7                       | RND 155HP05 CI   |   1    | optional: für Batteriespannungsmessung unter Last
 R8                       | RND 155HP05 AF   |   1    | optional: für Batteriespannungsmessung unter Last
 Q1                       | IRLML 6344       |   1    | optional: für Batteriespannungsmessung unter Last
-SW0                      | JTP-1130         |   1    | optional: Konfigtaster *Achtung, evtl. andere Bauhöhe!*
+SW0                      | TASTER 3301      |   1    | optional: Konfigtaster *Achtung, diese Bauhöhe ist für die Montage kopfüber!*
 SW1 .. SW10              | JTP-1130         |  10    | *Achtung, evtl. andere Bauhöhe!*
 U1                       | ATMEGA 1284P-AU  |   1    | -
 Y1                       | CSTCE 8,00       |   1    | -
 Verbinder zum CC1101     | MPE 150-1-010    |   1    | -
 Verbinder zum ePaper     | MPE 087-1-010    |   1    | -
 Verbinder zur Batterie   | -                |   -    | optional, kann auch angelötet werden
+Batteriefach             | HALTER 2XUM4-NLF |   -    | optional, für 2x AAA
+Batteriefach             | HALTER 2XAAZ     |   -    | optional, für 2x AA
 
 
 
@@ -73,6 +75,7 @@ Lockbits | 0xEF | optional
 
 ### Firmware
 
+![Einstellungen IDE](https://github.com/jp112sdl/HB-Dis-EP-42BW/blob/master/PCB/Images/ArduinoIDE_Auswahl_Controller.png)
 
 
 
@@ -84,7 +87,7 @@ Danach den Resonator, die Kondensatoren und Widerstände auflöten.
 Mit einem Multimeter messen ob kein Kurzschluss zwischen VCC und GND besteht (mehrere 10 K Widerstand sind okay).
 
 Den ISP Programmieradapter an den 6-poligen Anschluss auf der **Rückseite** anschließen.
-Nun kann entweder der Sketch direkt geflasht werden ("Hochladen mit Programmer"), oder zuerst der [Bootloader](https://github.com/TomMajor/AskSinPP_Examples/tree/master/Info/Info_HB-Dis-EP-42BW/bootloader) und dann der eigentliche Sketch über den FTDI-Anschluss.
+Nun kann entweder der Sketch direkt geflasht werden ("Hochladen mit Programmer"), oder zuerst der [Bootloader](https://github.com/TomMajor/AskSinPP_Examples/tree/master/Info/Bootloader/mega1284) und dann der eigentliche Sketch über den FTDI-Anschluss.
 
 Pin am ISP-Kabel | Bedeutung
 ---------------- | ----------
