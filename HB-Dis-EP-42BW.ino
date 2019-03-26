@@ -88,7 +88,7 @@ const struct DeviceInfo PROGMEM devinfo = {
   {0x01, 0x01}                 // Info Bytes
 };
 
-enum Alignments {AlignRight = 0, AlignCenter = 1, AlignLeft = 2};
+enum Alignments {AlignRight = 0, AlignCenterIconRight = 1, AlignCenterIconLeft = 3, AlignLeft = 2};
 
 typedef struct {
   uint8_t Alignment = AlignRight;
@@ -571,11 +571,18 @@ void updateDisplay() {
         leftTextPos = 40;
         if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         break;
-      case AlignCenter:
+      case AlignCenterIconRight:
         leftTextPos = (display.width() / 2) - (u8g2Fonts.getUTF8Width(viewText.c_str()) / 2);
         if (icon_number != 255) {
           leftTextPos -= ((Icons[icon_number].width  / 2) + 4);
           display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+        }
+        break;
+      case AlignCenterIconLeft:
+        leftTextPos = (display.width() / 2) - (u8g2Fonts.getUTF8Width(viewText.c_str()) / 2);
+        if (icon_number != 255) {
+          leftTextPos += ((Icons[icon_number].width  / 2) + 4);
+          display.drawBitmap(Icons[icon_number].Icon, leftTextPos - Icons[icon_number].width - 8 , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         }
         break;
        case AlignRight:
