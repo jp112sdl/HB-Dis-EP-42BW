@@ -72,6 +72,7 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define MSG_START_KEY     0x02
 #define MSG_TEXT_KEY      0x12
 #define MSG_ICON_KEY      0x13
+#define MSG_CLR_LINE_KEY  0xFE
 
 #include "Icons.h"
 
@@ -282,37 +283,40 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
           for (int i = 0; i < commandIdx; i++) {
             DHEX(command[i]); DPRINT(" ");
 
-            if (getText) {
-              if ((command[i] >= 0x20 && command[i] < 0x80) || command[i] == 0xb0 ) {
-                char c = command[i];
-                Text += c;
-              } else {
-                getText = false;
-                DisplayLines[currentLine].Text = Text;
-                //DPRINTLN(""); DPRINT("DisplayLines[" + String(currentLine) + "].Text = "); DPRINTLN(Text);
-              }
-            }
-
-            if (command[i] == MSG_TEXT_KEY) {
-              DisplayLines[currentLine].Icon = 0xff;  //clear icon
-              if (command[i + 1] < 0x80) {
-                getText = true;
-              } else {
-                uint8_t textNum = command[i + 1] - 0x80;
-                //DPRINTLN(""); DPRINT("USE PRECONF TEXT NUMBER "); DDEC(textNum); DPRINT(" = "); DPRINTLN(List1Texts[textNum]);
-                DisplayLines[currentLine].Text =  List1Texts[textNum];
-              }
-            }
-
-            if (command[i] == MSG_ICON_KEY) {
-              DisplayLines[currentLine].Icon = command[i + 1] - 0x80;
-            }
-
             if (command[i] == AS_ACTION_COMMAND_EOL) {
+              if (Text != "") DisplayLines[currentLine].Text = Text;
               //DPRINT("EOL DETECTED. currentLine = ");DDECLN(currentLine);
               currentLine++;
               Text = "";
               getText = false;
+            }
+
+            if (getText == true) {
+              if ((command[i] >= 0x20 && command[i] < 0x80) || command[i] == 0xb0 ) {
+                char c = command[i];
+                Text += c;
+              } else if (command[i] >= 0x80) {
+                uint8_t textNum = command[i] - 0x80;
+                Text +=  List1Texts[textNum];
+                //DPRINTLN(""); DPRINT("USE PRECONF TEXT NUMBER "); DDEC(textNum); DPRINT(" = "); DPRINTLN(List1Texts[textNum]);
+              }
+            }
+
+            if (command[i] == MSG_TEXT_KEY) {
+              getText = true;
+              DisplayLines[currentLine].Icon = 0xff;  //clear icon
+            }
+
+            if (command[i] == MSG_ICON_KEY) {
+              getText = false;
+              DisplayLines[currentLine].Icon = command[i + 1] - 0x80;
+            }
+
+            if (command[i] == MSG_CLR_LINE_KEY) {
+              getText = false;
+              for (uint8_t i = 0; i < TEXT_LENGTH; i++)
+                Text += F(" ");
+              DisplayLines[currentLine].Icon = 0xff;
             }
           }
         }
