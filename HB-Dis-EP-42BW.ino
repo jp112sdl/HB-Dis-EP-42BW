@@ -297,7 +297,9 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
                 Text += c;
               } else if (command[i] >= 0x80) {
                 uint8_t textNum = command[i] - 0x80;
-                Text +=  List1Texts[textNum];
+                String fixText = List1Texts[textNum];
+                fixText.trim();
+                Text += fixText;
                 //DPRINTLN(""); DPRINT("USE PRECONF TEXT NUMBER "); DDEC(textNum); DPRINT(" = "); DPRINTLN(List1Texts[textNum]);
               }
             }
