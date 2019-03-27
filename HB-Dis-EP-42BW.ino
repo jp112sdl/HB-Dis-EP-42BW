@@ -295,7 +295,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
               if ((command[i] >= 0x20 && command[i] < 0x80) || command[i] == 0xb0 ) {
                 char c = command[i];
                 Text += c;
-              } else if (command[i] >= 0x80) {
+              } else if (command[i] >= 0x80 && command[i] < 0x80 + (DISPLAY_LINES * 2)) {
                 uint8_t textNum = command[i] - 0x80;
                 String fixText = List1Texts[textNum];
                 fixText.trim();
