@@ -620,13 +620,16 @@ void initDisplay(uint8_t serial[11]) {
   u8g2Fonts.setForegroundColor(DisplayConfig.clFG);
   u8g2Fonts.setBackgroundColor(DisplayConfig.clBG);
   display.fillScreen(DisplayConfig.clBG);
+
+
+  const char * title        PROGMEM = "HB-Dis-EP-42BW";
+  const char * asksinpp     PROGMEM = "AskSinPP";
+  const char * version      PROGMEM = "V " ASKSIN_PLUS_PLUS_VERSION;
+  const char * compiledMsg  PROGMEM = "compiled on";
+  const char * compiledDate PROGMEM = __DATE__ " " __TIME__;
+  const char * ser                  = (char*)serial;
+
   u8g2Fonts.setFont(u8g2_font_helvB24_tf);
-
-
-  const char * title    PROGMEM = "HB-Dis-EP-42BW";
-  const char * asksinpp PROGMEM = "AskSinPP";
-  const char * version  PROGMEM = "V " ASKSIN_PLUS_PLUS_VERSION;
-  const char * ser              = (char*)serial;
 
   u8g2Fonts.setCursor(centerPosition(title), 95);
   u8g2Fonts.print(title);
@@ -637,9 +640,15 @@ void initDisplay(uint8_t serial[11]) {
   u8g2Fonts.setCursor(centerPosition(version), 210);
   u8g2Fonts.print(version);
 
+  u8g2Fonts.setFont(u8g2_font_helvB12_tf);
+  u8g2Fonts.setCursor(centerPosition(compiledMsg), 235);
+  u8g2Fonts.print(compiledMsg);
+  u8g2Fonts.setCursor(centerPosition(compiledDate), 255);
+  u8g2Fonts.print(compiledDate);
+
   u8g2Fonts.setFont(u8g2_font_helvB18_tf);
-  u8g2Fonts.setCursor(centerPosition(ser), 270);
+  u8g2Fonts.setCursor(centerPosition(ser), 320);
   u8g2Fonts.print(ser);
 
-  display.drawRect(60, 138, 175, 80, DisplayConfig.clFG);
+  display.drawRect(60, 138, 180, 125, DisplayConfig.clFG);
 }
