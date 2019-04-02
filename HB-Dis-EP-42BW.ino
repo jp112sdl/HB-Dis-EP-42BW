@@ -12,6 +12,7 @@
 // #define NDEBUG
 // #define NDISPLAY
 // #define USE_CC1101_ALT_FREQ_86835  //when using 'bad' cc1101 module
+#define USE_WOR
 
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
@@ -139,7 +140,6 @@ class Hal: public BaseHal {
 } hal;
 
 DisplayWorkingLedType DisplayWorkingLed;
-BurstDetector<Hal> bd(hal);
 
 DEFREGISTER(Reg0, MASTERID_REGS, DREG_LOCALRESETDISABLE, DREG_DISPLAY, DREG_TRANSMITTRYMAX)
 class DispList0 : public RegList0<Reg0> {
@@ -507,7 +507,6 @@ void setup () {
   sdev.disp10Channel().button().init(BTN10_PIN);
   initISR();
   buttonISR(cfgBtn, CONFIG_BUTTON_PIN);
-  bd.enable(sysclock);
   sdev.initDone();
   DDEVINFO(sdev);
   sdev.disp1Channel().changed(true);
