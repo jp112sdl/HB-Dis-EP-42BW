@@ -14,6 +14,10 @@
 // #define USE_CC1101_ALT_FREQ_86835  //when using 'bad' cc1101 module
 #define USE_WOR
 
+
+
+
+
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
 #include <GxGDEW042T2/GxGDEW042T2.h>      // 4.2" b/w
@@ -30,7 +34,6 @@
 GxIO_Class io(SPI, GxCS_PIN, GxDC_PIN, GxRST_PIN);
 GxEPD_Class display(io, GxRST_PIN, GxBUSY_PIN);
 
-U8G2_FOR_ADAFRUIT_GFX u8g2_for_adafruit_gfx;
 U8G2_FONTS_GFX u8g2Fonts(display);
 //////////////////////////////////////////////////////////////////////////////
 
@@ -567,28 +570,30 @@ void updateDisplay() {
     uint16_t icon_top = (24 - ( Icons[icon_number].height / 2)) + (i * 40) - 4;
 
     uint16_t leftTextPos = 0xffff;
+    uint16_t fontWidth = u8g2Fonts.getUTF8Width(viewText.c_str());
+
     switch (DisplayLines[i].Alignment) {
       case AlignLeft:
         leftTextPos = 40;
         if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         break;
       case AlignCenterIconRight:
-        leftTextPos = (display.width() / 2) - (u8g2Fonts.getUTF8Width(viewText.c_str()) / 2);
+        leftTextPos = (display.width() / 2) - (fontWidth / 2);
         if (icon_number != 255) {
           leftTextPos -= ((Icons[icon_number].width  / 2) + 4);
           display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         }
         break;
       case AlignCenterIconLeft:
-        leftTextPos = (display.width() / 2) - (u8g2Fonts.getUTF8Width(viewText.c_str()) / 2);
+        leftTextPos = (display.width() / 2) - (fontWidth / 2);
         if (icon_number != 255) {
           leftTextPos += ((Icons[icon_number].width  / 2) + 4);
           display.drawBitmap(Icons[icon_number].Icon, leftTextPos - Icons[icon_number].width - 8 , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         }
         break;
-       case AlignRight:
-       default:
-        leftTextPos = display.width() - 40 -  u8g2Fonts.getUTF8Width(viewText.c_str());
+      case AlignRight:
+      default:
+        leftTextPos = display.width() - 40 - fontWidth;
         if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
         break;
     }
@@ -600,6 +605,7 @@ void updateDisplay() {
 
 void updateDisplay(bool doit) {
   if (doit) {
+    u8g2Fonts.begin(display);
     mustUpdateDisplay = false;
     DisplayWorkingLed.ledOn();
     display.drawPaged(updateDisplay);
@@ -612,7 +618,6 @@ uint16_t centerPosition(const char * text) {
 }
 
 void initDisplay(uint8_t serial[11]) {
-  u8g2_for_adafruit_gfx.begin(display);
   display.setRotation(DISPLAY_ROTATE);
   u8g2Fonts.setFontMode(1);
   u8g2Fonts.setFontDirection(0);
