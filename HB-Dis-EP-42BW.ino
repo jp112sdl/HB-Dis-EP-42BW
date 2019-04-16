@@ -144,15 +144,19 @@ class Hal: public BaseHal {
 
 DisplayWorkingLedType DisplayWorkingLed;
 
-DEFREGISTER(Reg0, MASTERID_REGS, DREG_LOCALRESETDISABLE, DREG_DISPLAY, DREG_TRANSMITTRYMAX)
+DEFREGISTER(Reg0, MASTERID_REGS, DREG_TRANSMITTRYMAX, DREG_LEDMODE, DREG_LOWBATLIMIT, 0x06)
 class DispList0 : public RegList0<Reg0> {
   public:
     DispList0(uint16_t addr) : RegList0<Reg0>(addr) {}
 
+    bool displayInvertingHb(bool v) const { return this->writeRegister(0x06, 0x01,0,v); }
+    bool displayInvertingHb() const { return this->readRegister(0x06, 0x01,0,false); }
+
     void defaults () {
       clear();
-      localResetDisable(false);
-      displayInverting(false);
+      displayInvertingHb(false);
+      ledMode(1);
+      lowBatLimit(24);
       transmitDevTryMax(2);
     }
 };
@@ -420,9 +424,15 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
 
     virtual void configChanged () {
       DPRINTLN(F("CONFIG LIST0 CHANGED"));
-      DPRINT(F("displayInverting                      : ")); DDECLN(this->getList0().displayInverting());
+      uint8_t lowbat = getList0().lowBatLimit();
+      if( lowbat > 0 ) {
+        battery().low(lowbat);
+      }
 
-      if (this->getList0().displayInverting()) {
+      DPRINT(F("displayInverting: ")); DDECLN(this->getList0().displayInvertingHb());
+      DPRINT(F("lowBat          : ")); DDECLN(lowbat);
+
+      if (this->getList0().displayInvertingHb()) {
         DisplayConfig.clFG = GxEPD_WHITE;
         DisplayConfig.clBG = GxEPD_BLACK;
       } else {
