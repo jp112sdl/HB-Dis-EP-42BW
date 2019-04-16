@@ -11,8 +11,8 @@
 // #define USE_HW_SERIAL
 // #define NDEBUG
 // #define NDISPLAY
-// #define USE_CC1101_ALT_FREQ_86835  //when using 'bad' cc1101 module
 #define USE_WOR
+
 
 
 
@@ -40,6 +40,7 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define EI_NOTEXTERNAL
 #include <EnableInterrupt.h>
 
+#include <SPI.h>
 #include <AskSinPP.h>
 #include <LowPower.h>
 
@@ -48,9 +49,9 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 
 #define CC1101_CS_PIN       4   // PB4
 #define CC1101_GDO0_PIN     2   // PB2
-#define CC1101_SCK_PIN      7   // PB7
-#define CC1101_MOSI_PIN     5   // PB5
-#define CC1101_MISO_PIN     6   // PB6
+//#define CC1101_SCK_PIN      7   // PB7
+//#define CC1101_MOSI_PIN     5   // PB5
+//#define CC1101_MISO_PIN     6   // PB6
 #define CONFIG_BUTTON_PIN  15   // PD7
 #define LED_PIN_1           0   // PB0
 #define LED_PIN_2           1   // PB1
@@ -114,7 +115,8 @@ bool runSetup          = true;
 /**
    Configure the used hardware
 */
-typedef AvrSPI<CC1101_CS_PIN, CC1101_MOSI_PIN, CC1101_MISO_PIN, CC1101_SCK_PIN> SPIType;
+//typedef AvrSPI<CC1101_CS_PIN, CC1101_MOSI_PIN, CC1101_MISO_PIN, CC1101_SCK_PIN> SPIType;
+typedef LibSPI<CC1101_CS_PIN> SPIType;
 typedef Radio<SPIType, CC1101_GDO0_PIN> RadioType;
 typedef StatusLed<LED_PIN_1> LedType;
 typedef StatusLed<LED_PIN_2> DisplayWorkingLedType;
@@ -128,12 +130,6 @@ class Hal: public BaseHal {
       battery.init(seconds2ticks(60UL * 60 * 21), sysclock); //battery measure once an day
       battery.low(24);
       battery.critical(22);
-#ifdef USE_CC1101_ALT_FREQ_86835
-      // 2165E8 == 868.35 MHz
-      radio.initReg(CC1101_FREQ2, 0x21);
-      radio.initReg(CC1101_FREQ1, 0x65);
-      radio.initReg(CC1101_FREQ0, 0xE8);
-#endif
       activity.stayAwake(seconds2ticks(15));
     }
 
@@ -335,7 +331,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
         memset(command, 0, sizeof(command));
 
         for (int i = 0; i < DISPLAY_LINES; i++) {
-          DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
+         // DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
         }
         mustUpdateDisplay = true;
       }
@@ -440,11 +436,11 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
         DisplayConfig.clBG = GxEPD_WHITE;
       }
 
-      bool somethingChanged = (DisplayConfig.Inverted != this->getList0().displayInverting());
+      bool somethingChanged = (DisplayConfig.Inverted != this->getList0().displayInvertingHb());
 
-      DisplayConfig.Inverted = this->getList0().displayInverting();
+      DisplayConfig.Inverted = this->getList0().displayInvertingHb();
 
-      if (!runSetup && somethingChanged) mustUpdateDisplay = true;
+      //if (!runSetup && somethingChanged) mustUpdateDisplay = true;
     }
 };
 DisplayDevice sdev(devinfo, 0x20);
@@ -557,11 +553,11 @@ void showInitDisplay() {
 }
 
 void updateDisplay() {
-  u8g2Fonts.setFont(u8g2_font_helvB18_tf);
-  u8g2Fonts.setFontMode(1);
   u8g2Fonts.setForegroundColor(DisplayConfig.clFG);
   u8g2Fonts.setBackgroundColor(DisplayConfig.clBG);
   display.fillScreen(DisplayConfig.clBG);
+  u8g2Fonts.setFont(u8g2_font_helvB18_tf);
+  u8g2Fonts.setFontMode(1);
 
   for (uint16_t i = 0; i < 10; i++) {
     if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), DisplayConfig.clFG);
