@@ -43,6 +43,7 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #include <LowPower.h>
 
 #include <Register.h>
+#include <Remote.h>
 #include <MultiChannelDevice.h>
 
 #define CC1101_CS_PIN       4   // PB4
@@ -63,7 +64,6 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define BTN8_PIN           A7   // PA7
 #define BTN9_PIN           23   // PC7
 #define BTN10_PIN          22   // PC6
-#define remoteChannelISR(chan,pin) class __##pin##ISRHandler { public: static void isr () { chan.irq(); } }; chan.button().init(pin); enableInterrupt(pin,__##pin##ISRHandler::isr,CHANGE);
 
 #define TEXT_LENGTH        16
 #define DISPLAY_LINES      10
@@ -103,14 +103,7 @@ typedef struct {
 } DisplayLine;
 DisplayLine DisplayLines[DISPLAY_LINES];
 
-struct {
-  bool Inverted = false;
-  uint16_t clFG = GxEPD_BLACK;
-  uint16_t clBG = GxEPD_WHITE;
-} DisplayConfig;
-
 String List1Texts[DISPLAY_LINES * 2];
-bool mustUpdateDisplay = false;
 bool runSetup          = true;
 /**
    Configure the used hardware
@@ -148,34 +141,72 @@ public:
   bool Enabled() {
     return enabled;
   }
-} DisplayWorkingLed;
+} ePaperWorkingLed;
 
-
-bool setMustUpdateDisplay() {
-  return mustUpdateDisplay;
-}
-
-void setMustUpdateDisplay(bool m) {
-  if (m == true && DisplayWorkingLed.Enabled() == true) DisplayWorkingLed.set(LedStates::pairing);
-  mustUpdateDisplay = m;
-}
-
-class RefreshDisplayAlarm : public Alarm {
+class ePaperType : public Alarm {
+private:
+  bool mustUpdateDisplay;
+  bool inverted;
+  uint16_t clFG;
+  uint16_t clBG;
 public:
-  RefreshDisplayAlarm () :  Alarm(0)  {}
-  virtual ~RefreshDisplayAlarm () {}
-  void cancel (AlarmClock& clock) {
-    clock.cancel(*this);
+  ePaperType () :  Alarm(0), mustUpdateDisplay(false), inverted(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
+  virtual ~ePaperType () {}
+
+  uint16_t ForegroundColor() {
+    return clFG;
   }
-  void set (uint32_t t,AlarmClock& clock) {
-    clock.cancel(*this);
+
+  void ForegroundColor(uint16_t c) {
+    clFG = c;
+  }
+
+  uint16_t BackgroundColor() {
+    return clBG;
+  }
+
+  void BackgroundColor(uint16_t c) {
+    clBG = c;
+  }
+
+  bool Inverted() {
+    return inverted;
+  }
+
+  void Inverted(bool i) {
+    inverted = i;
+  }
+
+  bool MustUpdateDisplay() {
+    return mustUpdateDisplay;
+  }
+
+  void MustUpdateDisplay(bool m) {
+    if (m == true && ePaperWorkingLed.Enabled() == true) ePaperWorkingLed.set(LedStates::pairing);
+    mustUpdateDisplay = m;
+  }
+
+  void setRefreshAlarm (uint32_t t) {
+    sysclock.cancel(*this);
     Alarm::set(millis2ticks(t));
-    clock.add(*this);
+    sysclock.add(*this);
   }
   virtual void trigger (__attribute__((unused)) AlarmClock& clock) {
-    updateDisplay(setMustUpdateDisplay());
+    if (this->MustUpdateDisplay()) {
+      this->MustUpdateDisplay(false);
+  #ifndef NDISPLAY
+      if (ePaperWorkingLed.Enabled() == true) {
+        ePaperWorkingLed.set(LedStates::nothing);
+        ePaperWorkingLed.ledOn();
+      }
+      display.drawPaged(updateDisplay);
+      ePaperWorkingLed.ledOff();
+  #else
+      DPRINTLN("UPDATEDISPLAY!");
+  #endif
     }
-} rda;
+  }
+} ePaper;
 
 DEFREGISTER(Reg0, MASTERID_REGS, DREG_TRANSMITTRYMAX, DREG_LEDMODE, DREG_LOWBATLIMIT, 0x06, 0x07)
 class DispList0 : public RegList0<Reg0> {
@@ -198,10 +229,10 @@ class DispList0 : public RegList0<Reg0> {
     }
 };
 
-DEFREGISTER(RemoteReg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90, 0x91)
-class RemoteList1 : public RegList1<RemoteReg1> {
+DEFREGISTER(Reg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90, 0x91)
+class DispList1 : public RegList1<Reg1> {
   public:
-    RemoteList1 (uint16_t addr) : RegList1<RemoteReg1>(addr) {}
+    DispList1 (uint16_t addr) : RegList1<Reg1>(addr) {}
 
     bool showLine (uint8_t value) const {
       return this->writeRegister(0x90, 0x01, 0, value & 0xff);
@@ -261,21 +292,16 @@ class RemoteList1 : public RegList1<RemoteReg1> {
     }
 };
 
-class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_PER_CHANNEL, DispList0>,
-  public Button {
 
-  private:
-    uint8_t       repeatcnt;
-    volatile bool isr;
-    uint8_t       commandIdx;
-    uint8_t       command[224];
-  public:
-    DispChannel () : Channel(), repeatcnt(0), isr(false), commandIdx(0) {}
+class DispChannel : public RemoteChannel<Hal,PEERS_PER_CHANNEL,DispList0, DispList1>  {
+private:
+  uint8_t       repeatcnt;
+  volatile bool isr;
+  uint8_t       commandIdx;
+  uint8_t       command[224];
+public:
+  DispChannel () : RemoteChannel() , repeatcnt(0), isr(false), commandIdx(0) {}
     virtual ~DispChannel () {}
-
-    Button& button () {
-      return *(Button*)this;
-    }
 
     void configChanged() {
       if (number() < NUM_CHANNELS) {
@@ -291,16 +317,8 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
         DisplayLines[(number() - 1)].Alignment = this->getList1().Alignment();
         DPRINT(number() < 10 ? "0":"");DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINT(this->getList1().TEXT1());DPRINT(F(" - TEXT2 = ")); DPRINT(this->getList1().TEXT2());DPRINT(F(" - Line  = ")); DDEC(this->getList1().showLine());DPRINT(F(" - Align = ")); DDECLN(this->getList1().Alignment());
 
-        if (!runSetup && somethingChanged) setMustUpdateDisplay(true);
+        if (!runSetup && somethingChanged) ePaper.MustUpdateDisplay(true);
       }
-    }
-
-    uint8_t status () const {
-      return 0;
-    }
-
-    uint8_t flags () const {
-      return 0;
     }
 
     bool process (__attribute__((unused)) const Message& msg) {
@@ -369,37 +387,14 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
         for (int i = 0; i < DISPLAY_LINES; i++) {
          // DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
         }
-        setMustUpdateDisplay(true);
+        ePaper.MustUpdateDisplay(true);
       }
 
       return true;
     }
-
+    
     bool process (__attribute__((unused)) const RemoteEventMsg& msg) {
       return true;
-    }
-
-    virtual void state(uint8_t s) {
-      DHEX(Channel::number());
-      Button::state(s);
-      RemoteEventMsg& msg = (RemoteEventMsg&)this->device().message();
-      msg.init(this->device().nextcount(), this->number(), repeatcnt, (s == longreleased || s == longpressed), this->device().battery().low());
-      if ( s == released || s == longreleased) {
-        this->device().sendPeerEvent(msg, *this);
-        repeatcnt++;
-      }
-      else if (s == longpressed) {
-        this->device().broadcastPeerEvent(msg, *this);
-      }
-    }
-
-    uint8_t state() const {
-      return Button::state();
-    }
-
-    bool pressed () const {
-      uint8_t s = state();
-      return s == Button::pressed || s == Button::debounce || s == Button::longpressed;
     }
 };
 
@@ -425,9 +420,9 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
       this->getDeviceID(devid);
       if (msg.to() == devid) {
         uint16_t rtime = this->getList0().displayRefreshWaitTime() * 100;
-        rda.set(rtime, sysclock);
+        ePaper.setRefreshAlarm(rtime);
       }
-      return ChannelDevice::process(msg);
+      return DisplayDevice::process(msg);
     }
 
     virtual void configChanged () {
@@ -439,23 +434,23 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
 
       uint8_t ledmode = this->getList0().ledMode();
       DPRINT(F("ledMode         : ")); DDECLN(ledmode);
-      DisplayWorkingLed.Enabled(ledmode);
+      ePaperWorkingLed.Enabled(ledmode);
 
       if (this->getList0().displayInvertingHb()) {
-        DisplayConfig.clFG = GxEPD_WHITE;
-        DisplayConfig.clBG = GxEPD_BLACK;
+        ePaper.ForegroundColor(GxEPD_WHITE);
+        ePaper.BackgroundColor(GxEPD_BLACK);
       } else {
-        DisplayConfig.clFG = GxEPD_BLACK;
-        DisplayConfig.clBG = GxEPD_WHITE;
+        ePaper.ForegroundColor(GxEPD_BLACK);
+        ePaper.BackgroundColor(GxEPD_WHITE);
       }
-      bool invertChanged = (DisplayConfig.Inverted != this->getList0().displayInvertingHb());
-      DisplayConfig.Inverted = this->getList0().displayInvertingHb();
+      bool invertChanged = (ePaper.Inverted() != this->getList0().displayInvertingHb());
+      ePaper.Inverted(this->getList0().displayInvertingHb());
       DPRINT(F("displayInverting: ")); DDECLN(this->getList0().displayInvertingHb());
 
       DPRINT(F("RefreshWaitTime : ")); DDECLN(this->getList0().displayRefreshWaitTime());
 
 
-      if (!runSetup && invertChanged) setMustUpdateDisplay(true);
+      if (!runSetup && invertChanged) ePaper.MustUpdateDisplay(true);
     }
 };
 DisplayDevice sdev(devinfo, 0x20);
@@ -466,8 +461,8 @@ public:
 
   virtual void state (uint8_t s) {
     if( s == ButtonType::longreleased ) {
-      setMustUpdateDisplay(true);
-      rda.set(20, sysclock);
+      ePaper.MustUpdateDisplay(true);
+      ePaper.setRefreshAlarm(20);
     }
     ConfigButton::state(s);
   }
@@ -503,13 +498,13 @@ void setup () {
   sdev.initDone();
   DDEVINFO(sdev);
   sdev.dispChannel(11).changed(true);
-  DisplayWorkingLed.init();
+  ePaperWorkingLed.init();
 
 #ifndef NDISPLAY
   u8g2Fonts.begin(display);
-  DisplayWorkingLed.ledOn();
+  ePaperWorkingLed.ledOn();
   display.drawPaged(showInitDisplay);
-  DisplayWorkingLed.ledOff();
+  ePaperWorkingLed.ledOff();
 #endif
   runSetup = false;
 }
@@ -525,6 +520,10 @@ void loop() {
   }
 }
 
+uint16_t centerPosition(const char * text) {
+  return (display.width() / 2) - (u8g2Fonts.getUTF8Width(text) / 2);
+}
+
 void showInitDisplay() {
   HMID devid;
   sdev.getDeviceID(devid);
@@ -535,14 +534,14 @@ void showInitDisplay() {
 }
 
 void updateDisplay() {
-  u8g2Fonts.setForegroundColor(DisplayConfig.clFG);
-  u8g2Fonts.setBackgroundColor(DisplayConfig.clBG);
-  display.fillScreen(DisplayConfig.clBG);
+  u8g2Fonts.setForegroundColor(ePaper.ForegroundColor());
+  u8g2Fonts.setBackgroundColor(ePaper.BackgroundColor());
+  display.fillScreen(ePaper.BackgroundColor());
   u8g2Fonts.setFont(u8g2_font_helvB18_tf);
   u8g2Fonts.setFontMode(1);
 
   for (uint16_t i = 0; i < 10; i++) {
-    if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), DisplayConfig.clFG);
+    if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), ePaper.ForegroundColor());
     DisplayLines[i].Text.trim();
     String viewText = DisplayLines[i].Text;
     viewText.replace("{", "ä");
@@ -563,26 +562,26 @@ void updateDisplay() {
     switch (DisplayLines[i].Alignment) {
       case AlignLeft:
         leftTextPos = 40;
-        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         break;
       case AlignCenterIconRight:
         leftTextPos = (display.width() / 2) - (fontWidth / 2);
         if (icon_number != 255) {
           leftTextPos -= ((Icons[icon_number].width  / 2) + 4);
-          display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+          display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         }
         break;
       case AlignCenterIconLeft:
         leftTextPos = (display.width() / 2) - (fontWidth / 2);
         if (icon_number != 255) {
           leftTextPos += ((Icons[icon_number].width  / 2) + 4);
-          display.drawBitmap(Icons[icon_number].Icon, leftTextPos - Icons[icon_number].width - 8 , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+          display.drawBitmap(Icons[icon_number].Icon, leftTextPos - Icons[icon_number].width - 8 , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         }
         break;
       case AlignRight:
       default:
         leftTextPos = display.width() - 40 - fontWidth;
-        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         break;
     }
 
@@ -591,33 +590,13 @@ void updateDisplay() {
   }
 }
 
-void updateDisplay(bool doit) {
-  if (doit) {
-    setMustUpdateDisplay(false);
-#ifndef NDISPLAY
-    if (DisplayWorkingLed.Enabled() == true) {
-      DisplayWorkingLed.set(LedStates::nothing);
-      DisplayWorkingLed.ledOn();
-    }
-    display.drawPaged(updateDisplay);
-    DisplayWorkingLed.ledOff();
-#else
-    DPRINTLN("UPDATEDISPLAY!");
-#endif
-  }
-}
-
-uint16_t centerPosition(const char * text) {
-  return (display.width() / 2) - (u8g2Fonts.getUTF8Width(text) / 2);
-}
-
 void initDisplay(uint8_t serial[11]) {
   display.setRotation(DISPLAY_ROTATE);
   u8g2Fonts.setFontMode(1);
   u8g2Fonts.setFontDirection(0);
-  u8g2Fonts.setForegroundColor(DisplayConfig.clFG);
-  u8g2Fonts.setBackgroundColor(DisplayConfig.clBG);
-  display.fillScreen(DisplayConfig.clBG);
+  u8g2Fonts.setForegroundColor(ePaper.ForegroundColor());
+  u8g2Fonts.setBackgroundColor(ePaper.BackgroundColor());
+  display.fillScreen(ePaper.BackgroundColor());
 
 
   const char * title        PROGMEM = "HB-Dis-EP-42BW";
@@ -648,5 +627,5 @@ void initDisplay(uint8_t serial[11]) {
   u8g2Fonts.setCursor(centerPosition(ser), 320);
   u8g2Fonts.print(ser);
 
-  display.drawRect(60, 138, 180, 125, DisplayConfig.clFG);
+  display.drawRect(60, 138, 180, 125, ePaper.ForegroundColor());
 }
