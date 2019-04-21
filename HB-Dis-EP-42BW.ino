@@ -104,7 +104,9 @@ typedef struct {
 DisplayLine DisplayLines[DISPLAY_LINES];
 
 String List1Texts[DISPLAY_LINES * 2];
+
 bool runSetup          = true;
+
 /**
    Configure the used hardware
 */
@@ -129,12 +131,12 @@ class Hal: public BaseHal {
     }
 } hal;
 
-class DisplayWorkingLedType : public StatusLed<LED_PIN_2>  {
+class ePaperWorkingLedType : public StatusLed<LED_PIN_2>  {
 private:
   bool enabled;
 public:
-  DisplayWorkingLedType () : enabled(true) {}
-  virtual ~DisplayWorkingLedType () {}
+  ePaperWorkingLedType () : enabled(true) {}
+  virtual ~ePaperWorkingLedType () {}
   void Enabled(bool e) {
     enabled = e;
   }
@@ -292,7 +294,6 @@ class DispList1 : public RegList1<Reg1> {
     }
 };
 
-
 class DispChannel : public RemoteChannel<Hal,PEERS_PER_CHANNEL,DispList0, DispList1>  {
 private:
   uint8_t       repeatcnt;
@@ -392,7 +393,7 @@ public:
 
       return true;
     }
-    
+
     bool process (__attribute__((unused)) const RemoteEventMsg& msg) {
       return true;
     }
@@ -401,7 +402,6 @@ public:
 class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>, NUM_CHANNELS, DispList0> {
   public:
     VirtChannel<Hal, DispChannel, DispList0> c[NUM_CHANNELS];
-  private:
   public:
     typedef ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>, NUM_CHANNELS, DispList0> DeviceType;
     DisplayDevice (const DeviceInfo& info, uint16_t addr) : DeviceType(info, addr) {
@@ -422,7 +422,7 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
         uint16_t rtime = this->getList0().displayRefreshWaitTime() * 100;
         ePaper.setRefreshAlarm(rtime);
       }
-      return DisplayDevice::process(msg);
+      return ChannelDevice::process(msg);
     }
 
     virtual void configChanged () {
