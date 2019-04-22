@@ -131,6 +131,7 @@ class Hal: public BaseHal {
     }
 } hal;
 
+void updateDisplay();
 class ePaperWorkingLedType : public StatusLed<LED_PIN_2>  {
 private:
   bool enabled;
