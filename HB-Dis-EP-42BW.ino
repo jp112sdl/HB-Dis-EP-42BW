@@ -17,7 +17,6 @@
 
 
 
-
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
 #include <GxGDEW042T2/GxGDEW042T2.h>      // 4.2" b/w
@@ -40,18 +39,18 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define EI_NOTEXTERNAL
 #include <EnableInterrupt.h>
 
-#include <SPI.h>
 #include <AskSinPP.h>
 #include <LowPower.h>
 
 #include <Register.h>
+#include <Remote.h>
 #include <MultiChannelDevice.h>
 
 #define CC1101_CS_PIN       4   // PB4
 #define CC1101_GDO0_PIN     2   // PB2
-//#define CC1101_SCK_PIN      7   // PB7
-//#define CC1101_MOSI_PIN     5   // PB5
-//#define CC1101_MISO_PIN     6   // PB6
+#define CC1101_SCK_PIN      7   // PB7
+#define CC1101_MOSI_PIN     5   // PB5
+#define CC1101_MISO_PIN     6   // PB6
 #define CONFIG_BUTTON_PIN  15   // PD7
 #define LED_PIN_1           0   // PB0
 #define LED_PIN_2           1   // PB1
@@ -72,6 +71,7 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define DISPLAY_ROTATE     3 // 0 = 0° , 1 = 90°, 2 = 180°, 3 = 270°
 
 #define PEERS_PER_CHANNEL 8
+#define NUM_CHANNELS      11
 #define LOWBAT_VOLTAGE    24
 
 #define MSG_START_KEY     0x02
@@ -88,7 +88,7 @@ const struct DeviceInfo PROGMEM devinfo = {
   {0xf3, 0x43, 0x00},          // Device ID
   "JPDISEP000",                // Device Serial
   {0xf3, 0x43},                // Device Model
-  0x10,                        // Firmware Version
+  0x11,                        // Firmware Version
   as::DeviceType::Remote,      // Device Type
   {0x01, 0x01}                 // Info Bytes
 };
@@ -103,23 +103,16 @@ typedef struct {
 } DisplayLine;
 DisplayLine DisplayLines[DISPLAY_LINES];
 
-struct {
-  bool Inverted = false;
-  uint16_t clFG = GxEPD_BLACK;
-  uint16_t clBG = GxEPD_WHITE;
-} DisplayConfig;
-
 String List1Texts[DISPLAY_LINES * 2];
-bool mustUpdateDisplay = false;
+
 bool runSetup          = true;
+
 /**
    Configure the used hardware
 */
-//typedef AvrSPI<CC1101_CS_PIN, CC1101_MOSI_PIN, CC1101_MISO_PIN, CC1101_SCK_PIN> SPIType;
-typedef LibSPI<CC1101_CS_PIN> SPIType;
+typedef AvrSPI<CC1101_CS_PIN, CC1101_MOSI_PIN, CC1101_MISO_PIN, CC1101_SCK_PIN> SPIType;
 typedef Radio<SPIType, CC1101_GDO0_PIN> RadioType;
 typedef StatusLed<LED_PIN_1> LedType;
-typedef StatusLed<LED_PIN_2> DisplayWorkingLedType;
 
 typedef AskSin<LedType, BatterySensor, RadioType> BaseHal;
 
@@ -138,9 +131,86 @@ class Hal: public BaseHal {
     }
 } hal;
 
-DisplayWorkingLedType DisplayWorkingLed;
+class ePaperWorkingLedType : public StatusLed<LED_PIN_2>  {
+private:
+  bool enabled;
+public:
+  ePaperWorkingLedType () : enabled(true) {}
+  virtual ~ePaperWorkingLedType () {}
+  void Enabled(bool e) {
+    enabled = e;
+  }
+  bool Enabled() {
+    return enabled;
+  }
+} ePaperWorkingLed;
 
-DEFREGISTER(Reg0, MASTERID_REGS, DREG_TRANSMITTRYMAX, DREG_LEDMODE, DREG_LOWBATLIMIT, 0x06)
+class ePaperType : public Alarm {
+private:
+  bool mustUpdateDisplay;
+  bool inverted;
+  uint16_t clFG;
+  uint16_t clBG;
+public:
+  ePaperType () :  Alarm(0), mustUpdateDisplay(false), inverted(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
+  virtual ~ePaperType () {}
+
+  uint16_t ForegroundColor() {
+    return clFG;
+  }
+
+  void ForegroundColor(uint16_t c) {
+    clFG = c;
+  }
+
+  uint16_t BackgroundColor() {
+    return clBG;
+  }
+
+  void BackgroundColor(uint16_t c) {
+    clBG = c;
+  }
+
+  bool Inverted() {
+    return inverted;
+  }
+
+  void Inverted(bool i) {
+    inverted = i;
+  }
+
+  bool MustUpdateDisplay() {
+    return mustUpdateDisplay;
+  }
+
+  void MustUpdateDisplay(bool m) {
+    if (m == true && ePaperWorkingLed.Enabled() == true) ePaperWorkingLed.set(LedStates::pairing);
+    mustUpdateDisplay = m;
+  }
+
+  void setRefreshAlarm (uint32_t t) {
+    sysclock.cancel(*this);
+    Alarm::set(millis2ticks(t));
+    sysclock.add(*this);
+  }
+  virtual void trigger (__attribute__((unused)) AlarmClock& clock) {
+    if (this->MustUpdateDisplay()) {
+      this->MustUpdateDisplay(false);
+  #ifndef NDISPLAY
+      if (ePaperWorkingLed.Enabled() == true) {
+        ePaperWorkingLed.set(LedStates::nothing);
+        ePaperWorkingLed.ledOn();
+      }
+      display.drawPaged(updateDisplay);
+      ePaperWorkingLed.ledOff();
+  #else
+      DPRINTLN("UPDATEDISPLAY!");
+  #endif
+    }
+  }
+} ePaper;
+
+DEFREGISTER(Reg0, MASTERID_REGS, DREG_TRANSMITTRYMAX, DREG_LEDMODE, DREG_LOWBATLIMIT, 0x06, 0x07)
 class DispList0 : public RegList0<Reg0> {
   public:
     DispList0(uint16_t addr) : RegList0<Reg0>(addr) {}
@@ -148,19 +218,23 @@ class DispList0 : public RegList0<Reg0> {
     bool displayInvertingHb(bool v) const { return this->writeRegister(0x06, 0x01,0,v); }
     bool displayInvertingHb() const { return this->readRegister(0x06, 0x01,0,false); }
 
+    uint8_t displayRefreshWaitTime () const { return this->readRegister(0x07,0); }
+    bool displayRefreshWaitTime (uint8_t value) const { return this->writeRegister(0x07,value); }
+
     void defaults () {
       clear();
       displayInvertingHb(false);
       ledMode(1);
       lowBatLimit(24);
       transmitDevTryMax(2);
+      displayRefreshWaitTime(50);
     }
 };
 
-DEFREGISTER(RemoteReg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90, 0x91)
-class RemoteList1 : public RegList1<RemoteReg1> {
+DEFREGISTER(Reg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90, 0x91)
+class DispList1 : public RegList1<Reg1> {
   public:
-    RemoteList1 (uint16_t addr) : RegList1<RemoteReg1>(addr) {}
+    DispList1 (uint16_t addr) : RegList1<Reg1>(addr) {}
 
     bool showLine (uint8_t value) const {
       return this->writeRegister(0x90, 0x01, 0, value & 0xff);
@@ -220,51 +294,32 @@ class RemoteList1 : public RegList1<RemoteReg1> {
     }
 };
 
-class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_PER_CHANNEL, DispList0>,
-  public Button {
-
-  private:
-    uint8_t       repeatcnt;
-    volatile bool isr;
-    uint8_t       commandIdx;
-    uint8_t       command[224];
-
-  public:
-
-    DispChannel () : Channel(), repeatcnt(0), isr(false), commandIdx(0) {}
+class DispChannel : public RemoteChannel<Hal,PEERS_PER_CHANNEL,DispList0, DispList1>  {
+private:
+  uint8_t       repeatcnt;
+  volatile bool isr;
+  uint8_t       commandIdx;
+  uint8_t       command[224];
+public:
+  DispChannel () : RemoteChannel() , repeatcnt(0), isr(false), commandIdx(0) {}
     virtual ~DispChannel () {}
 
-    Button& button () {
-      return *(Button*)this;
-    }
-
     void configChanged() {
-      if (number() < 11) {
+      if (number() < NUM_CHANNELS) {
         List1Texts[(number() - 1)  * 2] = this->getList1().TEXT1();
         List1Texts[((number() - 1) * 2) + 1] = this->getList1().TEXT2();
 
-        //bool somethingChanged = (
-        //                          DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
-        //                          DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
-        //                        );
+        bool somethingChanged = (
+                                  DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
+                                  DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
+                                );
 
         DisplayLines[(number() - 1)].showLine = this->getList1().showLine();
         DisplayLines[(number() - 1)].Alignment = this->getList1().Alignment();
-        DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINTLN(this->getList1().TEXT1());
-        DDEC(number()); DPRINT(F(" - TEXT2 = ")); DPRINTLN(this->getList1().TEXT2());
-        DDEC(number()); DPRINT(F(" - Line  = ")); DDECLN(this->getList1().showLine());
-        DDEC(number()); DPRINT(F(" - Align = ")); DDECLN(this->getList1().Alignment());
+        DPRINT(number() < 10 ? "0":"");DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINT(this->getList1().TEXT1());DPRINT(F(" - TEXT2 = ")); DPRINT(this->getList1().TEXT2());DPRINT(F(" - Line  = ")); DDEC(this->getList1().showLine());DPRINT(F(" - Align = ")); DDECLN(this->getList1().Alignment());
 
-        // if (!runSetup && somethingChanged) mustUpdateDisplay = true;
+        if (!runSetup && somethingChanged) ePaper.MustUpdateDisplay(true);
       }
-    }
-
-    uint8_t status () const {
-      return 0;
-    }
-
-    uint8_t flags () const {
-      return 0;
     }
 
     bool process (__attribute__((unused)) const Message& msg) {
@@ -333,7 +388,7 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
         for (int i = 0; i < DISPLAY_LINES; i++) {
          // DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
         }
-        mustUpdateDisplay = true;
+        ePaper.MustUpdateDisplay(true);
       }
 
       return true;
@@ -342,153 +397,77 @@ class DispChannel : public Channel<Hal, RemoteList1, EmptyList, DefList4, PEERS_
     bool process (__attribute__((unused)) const RemoteEventMsg& msg) {
       return true;
     }
-
-    virtual void state(uint8_t s) {
-      DHEX(Channel::number());
-      Button::state(s);
-      RemoteEventMsg& msg = (RemoteEventMsg&)this->device().message();
-      msg.init(this->device().nextcount(), this->number(), repeatcnt, (s == longreleased || s == longpressed), this->device().battery().low());
-      if ( s == released || s == longreleased) {
-        this->device().sendPeerEvent(msg, *this);
-        repeatcnt++;
-      }
-      else if (s == longpressed) {
-        this->device().broadcastPeerEvent(msg, *this);
-      }
-    }
-
-    uint8_t state() const {
-      return Button::state();
-    }
-
-    bool pressed () const {
-      uint8_t s = state();
-      return s == Button::pressed || s == Button::debounce || s == Button::longpressed;
-    }
 };
 
-class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>, 11, DispList0> {
+class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>, NUM_CHANNELS, DispList0> {
   public:
-    VirtChannel<Hal, DispChannel, DispList0> c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11;
+    VirtChannel<Hal, DispChannel, DispList0> c[NUM_CHANNELS];
   public:
-    typedef ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>, 11, DispList0> DeviceType;
+    typedef ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>, NUM_CHANNELS, DispList0> DeviceType;
     DisplayDevice (const DeviceInfo& info, uint16_t addr) : DeviceType(info, addr) {
-      DeviceType::registerChannel(c1, 1);
-      DeviceType::registerChannel(c2, 2);
-      DeviceType::registerChannel(c3, 3);
-      DeviceType::registerChannel(c4, 4);
-      DeviceType::registerChannel(c5, 5);
-      DeviceType::registerChannel(c6, 6);
-      DeviceType::registerChannel(c7, 7);
-      DeviceType::registerChannel(c8, 8);
-      DeviceType::registerChannel(c9, 9);
-      DeviceType::registerChannel(c10, 10);
-      DeviceType::registerChannel(c11, 11);
+      for (uint8_t i = 0; i < NUM_CHANNELS; i++) {
+        DeviceType::registerChannel(c[i], i+1);
+      }
     }
     virtual ~DisplayDevice () {}
 
-    DispChannel& disp1Channel ()  {
-      return c1;
+    DispChannel& dispChannel (uint8_t num)  {
+      return c[num - 1];
     }
-    DispChannel& disp2Channel ()  {
-      return c2;
-    }
-    DispChannel& disp3Channel ()  {
-      return c3;
-    }
-    DispChannel& disp4Channel ()  {
-      return c4;
-    }
-    DispChannel& disp5Channel ()  {
-      return c5;
-    }
-    DispChannel& disp6Channel ()  {
-      return c6;
-    }
-    DispChannel& disp7Channel ()  {
-      return c7;
-    }
-    DispChannel& disp8Channel ()  {
-      return c8;
-    }
-    DispChannel& disp9Channel ()  {
-      return c9;
-    }
-    DispChannel& disp10Channel ()  {
-      return c10;
+
+    bool process(Message& msg) {
+      HMID devid;
+      this->getDeviceID(devid);
+      if (msg.to() == devid) {
+        uint16_t rtime = this->getList0().displayRefreshWaitTime() * 100;
+        ePaper.setRefreshAlarm(rtime);
+      }
+      return ChannelDevice::process(msg);
     }
 
     virtual void configChanged () {
       DPRINTLN(F("CONFIG LIST0 CHANGED"));
-      uint8_t lowbat = getList0().lowBatLimit();
-      if( lowbat > 0 ) {
-        battery().low(lowbat);
-      }
 
-      DPRINT(F("displayInverting: ")); DDECLN(this->getList0().displayInvertingHb());
+      uint8_t lowbat = getList0().lowBatLimit();
+      if( lowbat > 0 ) battery().low(lowbat);
       DPRINT(F("lowBat          : ")); DDECLN(lowbat);
 
+      uint8_t ledmode = this->getList0().ledMode();
+      DPRINT(F("ledMode         : ")); DDECLN(ledmode);
+      ePaperWorkingLed.Enabled(ledmode);
+
       if (this->getList0().displayInvertingHb()) {
-        DisplayConfig.clFG = GxEPD_WHITE;
-        DisplayConfig.clBG = GxEPD_BLACK;
+        ePaper.ForegroundColor(GxEPD_WHITE);
+        ePaper.BackgroundColor(GxEPD_BLACK);
       } else {
-        DisplayConfig.clFG = GxEPD_BLACK;
-        DisplayConfig.clBG = GxEPD_WHITE;
+        ePaper.ForegroundColor(GxEPD_BLACK);
+        ePaper.BackgroundColor(GxEPD_WHITE);
       }
+      bool invertChanged = (ePaper.Inverted() != this->getList0().displayInvertingHb());
+      ePaper.Inverted(this->getList0().displayInvertingHb());
+      DPRINT(F("displayInverting: ")); DDECLN(this->getList0().displayInvertingHb());
 
-      bool somethingChanged = (DisplayConfig.Inverted != this->getList0().displayInvertingHb());
+      DPRINT(F("RefreshWaitTime : ")); DDECLN(this->getList0().displayRefreshWaitTime());
 
-      DisplayConfig.Inverted = this->getList0().displayInvertingHb();
 
-      //if (!runSetup && somethingChanged) mustUpdateDisplay = true;
+      if (!runSetup && invertChanged) ePaper.MustUpdateDisplay(true);
     }
 };
 DisplayDevice sdev(devinfo, 0x20);
-ConfigButton<DisplayDevice> cfgBtn(sdev);
+class ConfBtn : public ConfigButton<DisplayDevice>  {
+public:
+  ConfBtn (DisplayDevice& i) : ConfigButton(i)  {}
+  virtual ~ConfBtn () {}
 
-static void isr1 () {
-  sdev.disp1Channel().irq();
-}
-static void isr2 () {
-  sdev.disp2Channel().irq();
-}
-static void isr3 () {
-  sdev.disp3Channel().irq();
-}
-static void isr4 () {
-  sdev.disp4Channel().irq();
-}
-static void isr5 () {
-  sdev.disp5Channel().irq();
-}
-static void isr6 () {
-  sdev.disp6Channel().irq();
-}
-static void isr7 () {
-  sdev.disp7Channel().irq();
-}
-static void isr8 () {
-  sdev.disp8Channel().irq();
-}
-static void isr9 () {
-  sdev.disp9Channel().irq();
-}
-static void isr10 () {
-  sdev.disp10Channel().irq();
-}
-
-void initISR() {
-  enableInterrupt(BTN1_PIN, isr1, CHANGE);
-  enableInterrupt(BTN2_PIN, isr2, CHANGE);
-  enableInterrupt(BTN3_PIN, isr3, CHANGE);
-  enableInterrupt(BTN4_PIN, isr4, CHANGE);
-  enableInterrupt(BTN5_PIN, isr5, CHANGE);
-  enableInterrupt(BTN6_PIN, isr6, CHANGE);
-  enableInterrupt(BTN7_PIN, isr7, CHANGE);
-  enableInterrupt(BTN8_PIN, isr8, CHANGE);
-  enableInterrupt(BTN9_PIN, isr9, CHANGE);
-  enableInterrupt(BTN10_PIN, isr10, CHANGE);
-}
+  virtual void state (uint8_t s) {
+    if( s == ButtonType::longreleased ) {
+      ePaper.MustUpdateDisplay(true);
+      ePaper.setRefreshAlarm(20);
+    }
+    ConfigButton::state(s);
+  }
+};
+ConfBtn cfgBtn(sdev);
 
 void setup () {
   runSetup = true;
@@ -504,27 +483,28 @@ void setup () {
 
   DINIT(57600, ASKSIN_PLUS_PLUS_IDENTIFIER);
   sdev.init(hal);
-  sdev.disp1Channel().button().init(BTN1_PIN);
-  sdev.disp2Channel().button().init(BTN2_PIN);
-  sdev.disp3Channel().button().init(BTN3_PIN);
-  sdev.disp4Channel().button().init(BTN4_PIN);
-  sdev.disp5Channel().button().init(BTN5_PIN);
-  sdev.disp6Channel().button().init(BTN6_PIN);
-  sdev.disp7Channel().button().init(BTN7_PIN);
-  sdev.disp8Channel().button().init(BTN8_PIN);
-  sdev.disp9Channel().button().init(BTN9_PIN);
-  sdev.disp10Channel().button().init(BTN10_PIN);
-  initISR();
+  remoteChannelISR(sdev.dispChannel(1),BTN1_PIN);
+  remoteChannelISR(sdev.dispChannel(2),BTN2_PIN);
+  remoteChannelISR(sdev.dispChannel(3),BTN3_PIN);
+  remoteChannelISR(sdev.dispChannel(4),BTN4_PIN);
+  remoteChannelISR(sdev.dispChannel(5),BTN5_PIN);
+  remoteChannelISR(sdev.dispChannel(6),BTN6_PIN);
+  remoteChannelISR(sdev.dispChannel(7),BTN7_PIN);
+  remoteChannelISR(sdev.dispChannel(8),BTN8_PIN);
+  remoteChannelISR(sdev.dispChannel(9),BTN9_PIN);
+  remoteChannelISR(sdev.dispChannel(10),BTN10_PIN);
+
   buttonISR(cfgBtn, CONFIG_BUTTON_PIN);
   sdev.initDone();
   DDEVINFO(sdev);
-  sdev.disp1Channel().changed(true);
-  DisplayWorkingLed.init();
+  sdev.dispChannel(11).changed(true);
+  ePaperWorkingLed.init();
 
 #ifndef NDISPLAY
-  DisplayWorkingLed.ledOn();
+  u8g2Fonts.begin(display);
+  ePaperWorkingLed.ledOn();
   display.drawPaged(showInitDisplay);
-  DisplayWorkingLed.ledOff();
+  ePaperWorkingLed.ledOff();
 #endif
   runSetup = false;
 }
@@ -536,11 +516,12 @@ void loop() {
     if (hal.battery.critical()) {
       hal.activity.sleepForever(hal);
     }
-#ifndef NDISPLAY
-    updateDisplay(mustUpdateDisplay);
-#endif
     hal.activity.savePower<Sleep<>>(hal);
   }
+}
+
+uint16_t centerPosition(const char * text) {
+  return (display.width() / 2) - (u8g2Fonts.getUTF8Width(text) / 2);
 }
 
 void showInitDisplay() {
@@ -553,14 +534,14 @@ void showInitDisplay() {
 }
 
 void updateDisplay() {
-  u8g2Fonts.setForegroundColor(DisplayConfig.clFG);
-  u8g2Fonts.setBackgroundColor(DisplayConfig.clBG);
-  display.fillScreen(DisplayConfig.clBG);
+  u8g2Fonts.setForegroundColor(ePaper.ForegroundColor());
+  u8g2Fonts.setBackgroundColor(ePaper.BackgroundColor());
+  display.fillScreen(ePaper.BackgroundColor());
   u8g2Fonts.setFont(u8g2_font_helvB18_tf);
   u8g2Fonts.setFontMode(1);
 
   for (uint16_t i = 0; i < 10; i++) {
-    if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), DisplayConfig.clFG);
+    if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), ePaper.ForegroundColor());
     DisplayLines[i].Text.trim();
     String viewText = DisplayLines[i].Text;
     viewText.replace("{", "ä");
@@ -581,26 +562,26 @@ void updateDisplay() {
     switch (DisplayLines[i].Alignment) {
       case AlignLeft:
         leftTextPos = 40;
-        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         break;
       case AlignCenterIconRight:
         leftTextPos = (display.width() / 2) - (fontWidth / 2);
         if (icon_number != 255) {
           leftTextPos -= ((Icons[icon_number].width  / 2) + 4);
-          display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+          display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         }
         break;
       case AlignCenterIconLeft:
         leftTextPos = (display.width() / 2) - (fontWidth / 2);
         if (icon_number != 255) {
           leftTextPos += ((Icons[icon_number].width  / 2) + 4);
-          display.drawBitmap(Icons[icon_number].Icon, leftTextPos - Icons[icon_number].width - 8 , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+          display.drawBitmap(Icons[icon_number].Icon, leftTextPos - Icons[icon_number].width - 8 , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         }
         break;
       case AlignRight:
       default:
         leftTextPos = display.width() - 40 - fontWidth;
-        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, DisplayConfig.clFG, GxEPD::bm_default);
+        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         break;
     }
 
@@ -609,27 +590,13 @@ void updateDisplay() {
   }
 }
 
-void updateDisplay(bool doit) {
-  if (doit) {
-    u8g2Fonts.begin(display);
-    mustUpdateDisplay = false;
-    DisplayWorkingLed.ledOn();
-    display.drawPaged(updateDisplay);
-    DisplayWorkingLed.ledOff();
-  }
-}
-
-uint16_t centerPosition(const char * text) {
-  return (display.width() / 2) - (u8g2Fonts.getUTF8Width(text) / 2);
-}
-
 void initDisplay(uint8_t serial[11]) {
   display.setRotation(DISPLAY_ROTATE);
   u8g2Fonts.setFontMode(1);
   u8g2Fonts.setFontDirection(0);
-  u8g2Fonts.setForegroundColor(DisplayConfig.clFG);
-  u8g2Fonts.setBackgroundColor(DisplayConfig.clBG);
-  display.fillScreen(DisplayConfig.clBG);
+  u8g2Fonts.setForegroundColor(ePaper.ForegroundColor());
+  u8g2Fonts.setBackgroundColor(ePaper.BackgroundColor());
+  display.fillScreen(ePaper.BackgroundColor());
 
 
   const char * title        PROGMEM = "HB-Dis-EP-42BW";
@@ -660,5 +627,5 @@ void initDisplay(uint8_t serial[11]) {
   u8g2Fonts.setCursor(centerPosition(ser), 320);
   u8g2Fonts.print(ser);
 
-  display.drawRect(60, 138, 180, 125, DisplayConfig.clFG);
+  display.drawRect(60, 138, 180, 125, ePaper.ForegroundColor());
 }
