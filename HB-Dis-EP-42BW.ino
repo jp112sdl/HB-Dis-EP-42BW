@@ -339,10 +339,6 @@ public:
       }
     }
 
-    bool process (__attribute__((unused)) const Message& msg) {
-      return true;
-    }
-
     bool process (const ActionCommandMsg& msg) {
       static bool getText = false;
       String Text = "";
@@ -403,7 +399,7 @@ public:
         memset(command, 0, sizeof(command));
 
         for (int i = 0; i < DISPLAY_LINES; i++) {
-         // DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
+         DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
         }
         ePaper.MustUpdateDisplay(true);
       }
@@ -411,8 +407,16 @@ public:
       return true;
     }
 
-    bool process (__attribute__((unused)) const RemoteEventMsg& msg) {
-      return true;
+    bool process (const Message& msg) {
+      return process(msg);
+    }
+
+    bool process (const RemoteEventMsg& msg) {
+      return process(msg);
+    }
+
+    uint8_t flags () const {
+      return hal.battery.low() ? 0x80 : 0x00;
     }
 };
 
