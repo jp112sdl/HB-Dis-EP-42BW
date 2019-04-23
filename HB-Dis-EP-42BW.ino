@@ -11,7 +11,11 @@
 // #define USE_HW_SERIAL
 // #define NDEBUG
 // #define NDISPLAY
+#define BATTERY_MODE
+
+#ifdef BATTERY_MODE
 #define USE_WOR
+#endif
 
 
 
@@ -87,7 +91,11 @@ using namespace as;
 const struct DeviceInfo PROGMEM devinfo = {
   {0xf3, 0x43, 0x00},          // Device ID
   "JPDISEP000",                // Device Serial
+#ifdef BATTERY_MODE
   {0xf3, 0x43},                // Device Model
+#else
+  {0xf3, 0x53},                // Device Model
+#endif
   0x11,                        // Firmware Version
   as::DeviceType::Remote,      // Device Type
   {0x01, 0x01}                 // Info Bytes
@@ -114,16 +122,22 @@ typedef AvrSPI<CC1101_CS_PIN, CC1101_MOSI_PIN, CC1101_MISO_PIN, CC1101_SCK_PIN> 
 typedef Radio<SPIType, CC1101_GDO0_PIN> RadioType;
 typedef StatusLed<LED_PIN_1> LedType;
 
+#ifdef BATTERY_MODE
 typedef AskSin<LedType, BatterySensor, RadioType> BaseHal;
+#else
+typedef AskSin<LedType, NoBattery, RadioType> BaseHal;
+#endif
 
 class Hal: public BaseHal {
   public:
     void init(const HMID& id) {
       BaseHal::init(id);
+#ifdef BATTERY_MODE
       battery.init(seconds2ticks(60UL * 60 * 21), sysclock); //battery measure once an day
       battery.low(24);
       battery.critical(22);
       activity.stayAwake(seconds2ticks(15));
+#endif
     }
 
     bool runready () {
@@ -131,7 +145,6 @@ class Hal: public BaseHal {
     }
 } hal;
 
-void updateDisplay();
 class ePaperWorkingLedType : public StatusLed<LED_PIN_2>  {
 private:
   bool enabled;
@@ -146,6 +159,7 @@ public:
   }
 } ePaperWorkingLed;
 
+void updateDisplay();
 class ePaperType : public Alarm {
 private:
   bool mustUpdateDisplay;
@@ -226,9 +240,11 @@ class DispList0 : public RegList0<Reg0> {
       clear();
       displayInvertingHb(false);
       ledMode(1);
-      lowBatLimit(24);
       transmitDevTryMax(2);
       displayRefreshWaitTime(50);
+#ifdef BATTERY_MODE
+      lowBatLimit(24);
+#endif
     }
 };
 
@@ -323,10 +339,6 @@ public:
       }
     }
 
-    bool process (__attribute__((unused)) const Message& msg) {
-      return true;
-    }
-
     bool process (const ActionCommandMsg& msg) {
       static bool getText = false;
       String Text = "";
@@ -387,7 +399,7 @@ public:
         memset(command, 0, sizeof(command));
 
         for (int i = 0; i < DISPLAY_LINES; i++) {
-         // DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
+         DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
         }
         ePaper.MustUpdateDisplay(true);
       }
@@ -395,8 +407,16 @@ public:
       return true;
     }
 
-    bool process (__attribute__((unused)) const RemoteEventMsg& msg) {
-      return true;
+    bool process (const Message& msg) {
+      return process(msg);
+    }
+
+    bool process (const RemoteEventMsg& msg) {
+      return process(msg);
+    }
+
+    uint8_t flags () const {
+      return hal.battery.low() ? 0x80 : 0x00;
     }
 };
 
@@ -429,9 +449,11 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
     virtual void configChanged () {
       DPRINTLN(F("CONFIG LIST0 CHANGED"));
 
+#ifdef BATTERY_MODE
       uint8_t lowbat = getList0().lowBatLimit();
       if( lowbat > 0 ) battery().low(lowbat);
       DPRINT(F("lowBat          : ")); DDECLN(lowbat);
+#endif
 
       uint8_t ledmode = this->getList0().ledMode();
       DPRINT(F("ledMode         : ")); DDECLN(ledmode);
@@ -514,10 +536,14 @@ void loop() {
   bool worked = hal.runready();
   bool poll = sdev.pollRadio();
   if ( worked == false && poll == false ) {
+#ifdef BATTERY_MODE
     if (hal.battery.critical()) {
       hal.activity.sleepForever(hal);
     }
     hal.activity.savePower<Sleep<>>(hal);
+#else
+    hal.activity.savePower<Idle<>>(hal);
+#endif
   }
 }
 
