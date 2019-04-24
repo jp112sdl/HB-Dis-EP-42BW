@@ -82,6 +82,8 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define MSG_TEXT_KEY      0x12
 #define MSG_ICON_KEY      0x13
 #define MSG_CLR_LINE_KEY  0xFE
+#define MSG_MIN_LENGTH    14
+#define MSG_BUFFER_LENGTH 224
 
 #include "Icons.h"
 
@@ -313,12 +315,10 @@ class DispList1 : public RegList1<Reg1> {
 
 class DispChannel : public RemoteChannel<Hal,PEERS_PER_CHANNEL,DispList0, DispList1>  {
 private:
-  uint8_t       repeatcnt;
-  volatile bool isr;
-  uint8_t       commandIdx;
-  uint8_t       command[224];
+  uint8_t       msgBufferIdx;
+  uint8_t       msgBuffer[MSG_BUFFER_LENGTH];
 public:
-  DispChannel () : RemoteChannel() , repeatcnt(0), isr(false), commandIdx(0) {}
+  DispChannel () : RemoteChannel(), msgBufferIdx(0) {}
     virtual ~DispChannel () {}
 
     void configChanged() {
@@ -339,71 +339,96 @@ public:
       }
     }
 
+    bool validLineCount(){
+      uint8_t cnt = 0;
+      for (int i = 0; i < msgBufferIdx; i++) {
+        if (msgBuffer[i] == AS_ACTION_COMMAND_EOL) cnt++;
+      }
+      if (cnt != 10) {DPRINT("ERROR: EOL Count = ");DDECLN(cnt);}
+      return cnt == DISPLAY_LINES;
+    }
+
+    uint8_t resetMessageBuffer() {
+      //DPRINTLN("reset msgBuffer");
+      msgBufferIdx = 0;
+      memset(msgBuffer, 0, sizeof(msgBuffer));
+      return 0;
+    }
+
     bool process (const ActionCommandMsg& msg) {
       static bool getText = false;
+      static uint8_t currentLine = 0;
+
       String Text = "";
       for (int i = 0; i < msg.len(); i++) {
-        command[commandIdx] = msg.value(i);
-        commandIdx++;
+        if (msg.value(i) == MSG_START_KEY) {
+          currentLine = resetMessageBuffer();
+        }
+
+        if (msgBufferIdx < MSG_BUFFER_LENGTH) {
+          msgBuffer[msgBufferIdx] = msg.value(i);
+          msgBufferIdx++;
+        } else {
+          currentLine = resetMessageBuffer();
+        }
       }
 
-      if (msg.eot(AS_ACTION_COMMAND_EOT)) {
-        static uint8_t currentLine = 0;
-        if (commandIdx > 0 && command[0] == MSG_START_KEY) {
-          DPRINT("RECV: ");
-          for (int i = 0; i < commandIdx; i++) {
-            DHEX(command[i]); DPRINT(" ");
+      if (
+          msg.eot(AS_ACTION_COMMAND_EOT) &&
+          msgBufferIdx >= MSG_MIN_LENGTH &&
+          validLineCount() == true &&
+          msgBuffer[0] == MSG_START_KEY
+          ) {
+        DPRINT("RECV: ");
+        for (int i = 0; i < msgBufferIdx; i++) {
+          DHEX(msgBuffer[i]); DPRINT(" ");
 
-            if (command[i] == AS_ACTION_COMMAND_EOL) {
-              if (Text != "") DisplayLines[currentLine].Text = Text;
-              //DPRINT("EOL DETECTED. currentLine = ");DDECLN(currentLine);
-              currentLine++;
-              Text = "";
-              getText = false;
-            }
+          if (msgBuffer[i] == AS_ACTION_COMMAND_EOL) {
+            if (Text != "") DisplayLines[currentLine].Text = Text;
+            //DPRINT("EOL DETECTED. currentLine = ");DDECLN(currentLine);
+            currentLine++;
+            Text = "";
+            getText = false;
+          }
 
-            if (getText == true) {
-              if ((command[i] >= 0x20 && command[i] < 0x80) || command[i] == 0xb0 ) {
-                char c = command[i];
-                Text += c;
-              } else if (command[i] >= 0x80 && command[i] < 0x80 + (DISPLAY_LINES * 2)) {
-                uint8_t textNum = command[i] - 0x80;
-                String fixText = List1Texts[textNum];
-                fixText.trim();
-                Text += fixText;
-                //DPRINTLN(""); DPRINT("USE PRECONF TEXT NUMBER "); DDEC(textNum); DPRINT(" = "); DPRINTLN(List1Texts[textNum]);
-              }
-            }
-
-            if (command[i] == MSG_TEXT_KEY) {
-              getText = true;
-              DisplayLines[currentLine].Icon = 0xff;  //clear icon
-            }
-
-            if (command[i] == MSG_ICON_KEY) {
-              getText = false;
-              DisplayLines[currentLine].Icon = command[i + 1] - 0x80;
-            }
-
-            if (command[i] == MSG_CLR_LINE_KEY) {
-              getText = false;
-              for (uint8_t i = 0; i < TEXT_LENGTH; i++)
-                Text += F(" ");
-              DisplayLines[currentLine].Icon = 0xff;
+          if (getText == true) {
+            if ((msgBuffer[i] >= 0x20 && msgBuffer[i] < 0x80) || msgBuffer[i] == 0xb0 ) {
+              char c = msgBuffer[i];
+              Text += c;
+            } else if (msgBuffer[i] >= 0x80 && msgBuffer[i] < 0x80 + (DISPLAY_LINES * 2)) {
+              uint8_t textNum = msgBuffer[i] - 0x80;
+              String fixText = List1Texts[textNum];
+              fixText.trim();
+              Text += fixText;
+              //DPRINTLN(""); DPRINT("USE PRECONF TEXT NUMBER "); DDEC(textNum); DPRINT(" = "); DPRINTLN(List1Texts[textNum]);
             }
           }
+
+          if (msgBuffer[i] == MSG_TEXT_KEY) {
+            getText = true;
+            DisplayLines[currentLine].Icon = 0xff;  //clear icon
+          }
+
+          if (msgBuffer[i] == MSG_ICON_KEY) {
+            getText = false;
+            DisplayLines[currentLine].Icon = msgBuffer[i + 1] - 0x80;
+          }
+
+          if (msgBuffer[i] == MSG_CLR_LINE_KEY) {
+            getText = false;
+            for (uint8_t i = 0; i < TEXT_LENGTH; i++)
+              Text += F(" ");
+            DisplayLines[currentLine].Icon = 0xff;
+          }
         }
+
         DPRINTLN("");
-        currentLine = 0;
-        commandIdx = 0;
-        memset(command, 0, sizeof(command));
 
         for (int i = 0; i < DISPLAY_LINES; i++) {
          DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
         }
         ePaper.MustUpdateDisplay(true);
       }
-
       return true;
     }
 
