@@ -83,6 +83,8 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define MSG_ICON_KEY      0x13
 #define MSG_CLR_LINE_KEY  0xFE
 #define MSG_MIN_LENGTH    14
+#define MSG_BUFFER_LENGTH 224
+
 #include "Icons.h"
 
 // all library classes are placed in the namespace 'as'
@@ -313,10 +315,10 @@ class DispList1 : public RegList1<Reg1> {
 
 class DispChannel : public RemoteChannel<Hal,PEERS_PER_CHANNEL,DispList0, DispList1>  {
 private:
-  uint8_t       cmdBufferIdx;
-  uint8_t       cmdBuffer[224];
+  uint8_t       msgBufferIdx;
+  uint8_t       msgBuffer[MSG_BUFFER_LENGTH];
 public:
-  DispChannel () : RemoteChannel(), cmdBufferIdx(0) {}
+  DispChannel () : RemoteChannel(), msgBufferIdx(0) {}
     virtual ~DispChannel () {}
 
     void configChanged() {
@@ -339,11 +341,18 @@ public:
 
     bool validLineCount(){
       uint8_t cnt = 0;
-      for (int i = 0; i < cmdBufferIdx; i++) {
-        if (cmdBuffer[i] == AS_ACTION_COMMAND_EOL) cnt++;
+      for (int i = 0; i < msgBufferIdx; i++) {
+        if (msgBuffer[i] == AS_ACTION_COMMAND_EOL) cnt++;
       }
       //DPRINT("newLineCount = ");DDECLN(cnt);
       return cnt == DISPLAY_LINES;
+    }
+
+    uint8_t resetMessageBuffer() {
+      //DPRINTLN("reset msgBuffer");
+      msgBufferIdx = 0;
+      memset(msgBuffer, 0, sizeof(msgBuffer));
+      return 0;
     }
 
     bool process (const ActionCommandMsg& msg) {
@@ -353,26 +362,28 @@ public:
       String Text = "";
       for (int i = 0; i < msg.len(); i++) {
         if (msg.value(i) == MSG_START_KEY) {
-          //DPRINTLN("reset cmdBuffer");
-          cmdBufferIdx = 0;
-          memset(cmdBuffer, 0, sizeof(cmdBuffer));
-          currentLine = 0;
+          currentLine = resetMessageBuffer();
         }
-        cmdBuffer[cmdBufferIdx] = msg.value(i);
-        cmdBufferIdx++;
+
+        if (msgBufferIdx < MSG_BUFFER_LENGTH) {
+          msgBuffer[msgBufferIdx] = msg.value(i);
+          msgBufferIdx++;
+        } else {
+          currentLine = resetMessageBuffer();
+        }
       }
 
       if (
           msg.eot(AS_ACTION_COMMAND_EOT) &&
-          cmdBufferIdx >= MSG_MIN_LENGTH &&
+          msgBufferIdx >= MSG_MIN_LENGTH &&
           validLineCount() == true &&
-          cmdBuffer[0] == MSG_START_KEY
+          msgBuffer[0] == MSG_START_KEY
           ) {
         DPRINT("RECV: ");
-        for (int i = 0; i < cmdBufferIdx; i++) {
-          DHEX(cmdBuffer[i]); DPRINT(" ");
+        for (int i = 0; i < msgBufferIdx; i++) {
+          DHEX(msgBuffer[i]); DPRINT(" ");
 
-          if (cmdBuffer[i] == AS_ACTION_COMMAND_EOL) {
+          if (msgBuffer[i] == AS_ACTION_COMMAND_EOL) {
             if (Text != "") DisplayLines[currentLine].Text = Text;
             //DPRINT("EOL DETECTED. currentLine = ");DDECLN(currentLine);
             currentLine++;
@@ -381,11 +392,11 @@ public:
           }
 
           if (getText == true) {
-            if ((cmdBuffer[i] >= 0x20 && cmdBuffer[i] < 0x80) || cmdBuffer[i] == 0xb0 ) {
-              char c = cmdBuffer[i];
+            if ((msgBuffer[i] >= 0x20 && msgBuffer[i] < 0x80) || msgBuffer[i] == 0xb0 ) {
+              char c = msgBuffer[i];
               Text += c;
-            } else if (cmdBuffer[i] >= 0x80 && cmdBuffer[i] < 0x80 + (DISPLAY_LINES * 2)) {
-              uint8_t textNum = cmdBuffer[i] - 0x80;
+            } else if (msgBuffer[i] >= 0x80 && msgBuffer[i] < 0x80 + (DISPLAY_LINES * 2)) {
+              uint8_t textNum = msgBuffer[i] - 0x80;
               String fixText = List1Texts[textNum];
               fixText.trim();
               Text += fixText;
@@ -393,17 +404,17 @@ public:
             }
           }
 
-          if (cmdBuffer[i] == MSG_TEXT_KEY) {
+          if (msgBuffer[i] == MSG_TEXT_KEY) {
             getText = true;
             DisplayLines[currentLine].Icon = 0xff;  //clear icon
           }
 
-          if (cmdBuffer[i] == MSG_ICON_KEY) {
+          if (msgBuffer[i] == MSG_ICON_KEY) {
             getText = false;
-            DisplayLines[currentLine].Icon = cmdBuffer[i + 1] - 0x80;
+            DisplayLines[currentLine].Icon = msgBuffer[i + 1] - 0x80;
           }
 
-          if (cmdBuffer[i] == MSG_CLR_LINE_KEY) {
+          if (msgBuffer[i] == MSG_CLR_LINE_KEY) {
             getText = false;
             for (uint8_t i = 0; i < TEXT_LENGTH; i++)
               Text += F(" ");
