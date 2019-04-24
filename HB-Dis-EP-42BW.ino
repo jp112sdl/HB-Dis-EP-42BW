@@ -344,7 +344,7 @@ public:
       for (int i = 0; i < msgBufferIdx; i++) {
         if (msgBuffer[i] == AS_ACTION_COMMAND_EOL) cnt++;
       }
-      //DPRINT("newLineCount = ");DDECLN(cnt);
+      if (cnt != 10) {DPRINT("ERROR: EOL Count = ");DDECLN(cnt);}
       return cnt == DISPLAY_LINES;
     }
 
