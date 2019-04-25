@@ -165,13 +165,13 @@ void initDisplay();
 void updateDisplay();
 class ePaperType : public ePaperWorkingLedType, Alarm {
 private:
-  bool mUpdateDisplay;
-  bool shInitDisplay;
-  bool inverted;
-  uint16_t clFG;
-  uint16_t clBG;
+  bool                 mUpdateDisplay;
+  bool                 shInitDisplay;
+  bool                 inverted;
+  uint16_t             clFG;
+  uint16_t             clBG;
+  ePaperWorkingLedType workingLed;
 public:
-  ePaperWorkingLedType WorkingLed;
   ePaperType () :  ePaperWorkingLedType(), Alarm(0), mUpdateDisplay(false), shInitDisplay(false), inverted(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
   virtual ~ePaperType () {}
 
@@ -212,7 +212,7 @@ public:
   }
 
   void mustUpdateDisplay(bool m) {
-    if (m == true && WorkingLed.Enabled() == true) WorkingLed.set(LedStates::pairing);
+    if (m == true && workingLed.Enabled() == true) workingLed.set(LedStates::pairing);
     mUpdateDisplay = m;
   }
 
@@ -221,7 +221,11 @@ public:
     display.setRotation(DISPLAY_ROTATE);
     u8g2Fonts.setFontMode(1);
     u8g2Fonts.setFontDirection(0);
-    WorkingLed.init();
+    workingLed.init();
+  }
+
+  void setWorkingLedEnabled(bool en) {
+    workingLed.Enabled(en);
   }
 
   void setDisplayColors() {
@@ -238,9 +242,9 @@ public:
     if (this->mustUpdateDisplay()) {
       this->mustUpdateDisplay(false);
   #ifndef NDISPLAY
-      if (WorkingLed.Enabled() == true) {
-        WorkingLed.set(LedStates::nothing);
-        WorkingLed.ledOn();
+      if (workingLed.Enabled() == true) {
+        workingLed.set(LedStates::nothing);
+        workingLed.ledOn();
       }
       setDisplayColors();
       if (this->showInitDisplay() == true) {
@@ -250,7 +254,7 @@ public:
         display.drawPaged(updateDisplay);
       }
 
-      WorkingLed.ledOff();
+      workingLed.ledOff();
   #else
       DPRINTLN("UPDATEDISPLAY!");
   #endif
@@ -518,7 +522,7 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
 
       uint8_t ledmode = this->getList0().ledMode();
       DPRINT(F("ledMode         : ")); DDECLN(ledmode);
-      ePaper.WorkingLed.Enabled(ledmode);
+      ePaper.setWorkingLedEnabled(ledmode);
 
       if (this->getList0().displayInvertingHb()) {
         ePaper.ForegroundColor(GxEPD_WHITE);
