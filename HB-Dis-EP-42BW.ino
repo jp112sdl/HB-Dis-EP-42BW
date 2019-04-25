@@ -411,7 +411,12 @@ public:
 
           if (msgBuffer[i] == MSG_ICON_KEY) {
             getText = false;
-            DisplayLines[currentLine].Icon = msgBuffer[i + 1] - 0x80;
+            uint8_t iconPos = i + 1;
+            if (iconPos < MSG_BUFFER_LENGTH) {
+              if (msgBuffer[iconPos] >= 0x80) {
+                DisplayLines[currentLine].Icon = msgBuffer[iconPos] - 0x80;
+              }
+            }
           }
 
           if (msgBuffer[i] == MSG_CLR_LINE_KEY) {
