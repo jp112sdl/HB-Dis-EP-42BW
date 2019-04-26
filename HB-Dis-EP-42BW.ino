@@ -449,7 +449,11 @@ public:
             uint8_t iconPos = i + 1;
             if (iconPos < MSG_BUFFER_LENGTH) {
               if (msgBuffer[iconPos] >= 0x80) {
-                DisplayLines[currentLine].Icon = msgBuffer[iconPos] - 0x80;
+                uint8_t iconNumber = msgBuffer[iconPos] - 0x80;
+                if (iconNumber < ICON_COUNT)
+                  DisplayLines[currentLine].Icon = iconNumber;
+                else
+                  DPRINT(F("ICON Number out of range. ")); DDECLN(iconNumber);
               }
             }
           }
