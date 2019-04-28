@@ -29,6 +29,7 @@ Thread im Homematic-Forum: https://homematic-forum.de/forum/viewtopic.php?f=76&t
   - [Low-Power](https://github.com/rocketscream/Low-Power)
   - [EnableInterrupt](https://github.com/GreyGnome/EnableInterrupt)
   - [GxEPD](https://github.com/ZinggJM/GxEPD) 
+    - :arrow_right: um die Display-Aktualisierungsdauer zu verringern, lohnt es sich, in der `GxGDEW042T2.h` den Wert für [`GxGDEW042T2_PAGES`](https://github.com/ZinggJM/GxEPD/blob/master/src/GxGDEW042T2/GxGDEW042T2.h#L25) auf `3` zu reduzieren
   - [Adafruit-GFX](https://github.com/adafruit/Adafruit-GFX-Library)
   - [U8g2_for_Adafruit_GFX](https://github.com/olikraus/U8g2_for_Adafruit_GFX)
 
