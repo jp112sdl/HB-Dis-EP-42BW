@@ -82,7 +82,7 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define MSG_TEXT_KEY      0x12
 #define MSG_ICON_KEY      0x13
 #define MSG_CLR_LINE_KEY  0xFE
-#define MSG_MIN_LENGTH    14
+#define MSG_MIN_LENGTH    13
 #define MSG_BUFFER_LENGTH 224
 
 #include "Icons.h"
