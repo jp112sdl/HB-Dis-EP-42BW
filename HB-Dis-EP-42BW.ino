@@ -147,32 +147,31 @@ class Hal: public BaseHal {
     }
 } hal;
 
-class ePaperWorkingLedType : public StatusLed<LED_PIN_2>  {
-private:
-  bool enabled;
-public:
-  ePaperWorkingLedType () : enabled(true) {}
-  virtual ~ePaperWorkingLedType () {}
-  void Enabled(bool e) {
-    enabled = e;
-  }
-  bool Enabled() {
-    return enabled;
-  }
-};
 
 void initDisplay();
 void updateDisplay();
-class ePaperType : public ePaperWorkingLedType, Alarm {
+class ePaperType : public Alarm {
+  class ePaperWorkingLedType : public StatusLed<LED_PIN_2>  {
+  private:
+    bool enabled;
+  public:
+    ePaperWorkingLedType () : enabled(true) {}
+    virtual ~ePaperWorkingLedType () {}
+    void Enabled(bool e) {
+      enabled = e;
+    }
+    bool Enabled() {
+      return enabled;
+    }
+  } workingLed;
 private:
   bool                 mUpdateDisplay;
   bool                 shInitDisplay;
   bool                 inverted;
   uint16_t             clFG;
   uint16_t             clBG;
-  ePaperWorkingLedType workingLed;
 public:
-  ePaperType () :  ePaperWorkingLedType(), Alarm(0), mUpdateDisplay(false), shInitDisplay(false), inverted(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
+  ePaperType () :  Alarm(0), mUpdateDisplay(false), shInitDisplay(false), inverted(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
   virtual ~ePaperType () {}
 
   uint16_t ForegroundColor() {
