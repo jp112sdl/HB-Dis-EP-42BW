@@ -708,6 +708,10 @@ void initDisplay() {
   u8g2Fonts.print(compiledMsg);
   u8g2Fonts.setCursor(centerPosition(compiledDate), 255);
   u8g2Fonts.print(compiledDate);
+  char pages[12];
+  sprintf(pages, "Pages: %d", GxGDEW042T2_PAGES);
+  u8g2Fonts.setCursor(3, 16);
+  u8g2Fonts.print(pages);
 
   u8g2Fonts.setFont(u8g2_font_helvB18_tf);
   u8g2Fonts.setCursor(centerPosition(ser), 320);
