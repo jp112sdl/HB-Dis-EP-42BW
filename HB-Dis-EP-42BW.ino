@@ -540,7 +540,7 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
 
       DPRINT(F("RefreshWaitTime : ")); DDECLN(this->getList0().displayRefreshWaitTime());
 
-      if (this->getList0().masterid().valid() == false) {
+      if (this->getList0().masterid().valid() == false || runSetup == true) {
         ePaper.showInitDisplay(true);
         ePaper.mustUpdateDisplay(true);
         ePaper.setRefreshAlarm(20);
@@ -683,11 +683,15 @@ void initDisplay() {
   sdev.getDeviceSerial(serial);
   serial[10] = 0;
 
+  #define TOSTRING(x) #x
+  #define TOSTR(x) TOSTRING(x)
+
   const char * title        PROGMEM = "HB-Dis-EP-42BW";
-  const char * asksinpp     PROGMEM = "AskSinPP";
+  const char * asksinpp     PROGMEM = "AskSin++";
   const char * version      PROGMEM = "V " ASKSIN_PLUS_PLUS_VERSION;
   const char * compiledMsg  PROGMEM = "compiled on";
   const char * compiledDate PROGMEM = __DATE__ " " __TIME__;
+  const char * pages        PROGMEM = "GxGDEW042T2_PAGES: " TOSTR(GxGDEW042T2_PAGES);
   const char * ser                  = (char*)serial;
   const char * nomaster1    PROGMEM = "- keine Zentrale -";
   const char * nomaster2    PROGMEM = "- angelernt -";
@@ -708,18 +712,20 @@ void initDisplay() {
   u8g2Fonts.print(compiledMsg);
   u8g2Fonts.setCursor(centerPosition(compiledDate), 255);
   u8g2Fonts.print(compiledDate);
-  char pages[12];
-  sprintf(pages, "Pages: %d", GxGDEW042T2_PAGES);
-  u8g2Fonts.setCursor(3, 16);
+
+  u8g2Fonts.setFont(u8g2_font_helvR10_tf);
+  u8g2Fonts.setCursor(centerPosition(pages), 275);
   u8g2Fonts.print(pages);
 
   u8g2Fonts.setFont(u8g2_font_helvB18_tf);
   u8g2Fonts.setCursor(centerPosition(ser), 320);
   u8g2Fonts.print(ser);
 
-  u8g2Fonts.setFont(u8g2_font_helvB18_tf);
-  u8g2Fonts.setCursor(centerPosition(nomaster1), 360);u8g2Fonts.print(nomaster1);
-  u8g2Fonts.setCursor(centerPosition(nomaster2), 386);u8g2Fonts.print(nomaster2);
+  if (sdev.getList0().masterid().valid() == false) {
+    u8g2Fonts.setFont(u8g2_font_helvB18_tf);
+    u8g2Fonts.setCursor(centerPosition(nomaster1), 360);u8g2Fonts.print(nomaster1);
+    u8g2Fonts.setCursor(centerPosition(nomaster2), 386);u8g2Fonts.print(nomaster2);
+  }
 
-  display.drawRect(60, 138, 180, 125, ePaper.ForegroundColor());
+  display.drawRect(50, 138, 200, 145, ePaper.ForegroundColor());
 }
