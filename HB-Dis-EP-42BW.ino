@@ -284,10 +284,19 @@ class DispList0 : public RegList0<Reg0> {
     }
 };
 
-DEFREGISTER(Reg1, CREG_AES_ACTIVE, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90, 0x91)
-class DispList1 : public RegList1<Reg1> {
+DEFREGISTER(DispReg1)
+class DispList1 : public RegList1<DispReg1> {
+public:
+  DispList1 (uint16_t addr) : RegList1<DispReg1>(addr) {}
+  void defaults () {
+    clear();
+  }
+};
+
+DEFREGISTER(RemReg1, CREG_AES_ACTIVE, CREG_LONGPRESSTIME ,CREG_DOUBLEPRESSTIME, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x90, 0x91)
+class RemList1 : public RegList1<RemReg1> {
   public:
-    DispList1 (uint16_t addr) : RegList1<Reg1>(addr) {}
+    RemList1 (uint16_t addr) : RegList1<RemReg1>(addr) {}
 
     bool showLine (uint8_t value) const {
       return this->writeRegister(0x90, 0x01, 0, value & 0xff);
@@ -338,12 +347,42 @@ class DispList1 : public RegList1<Reg1> {
     void defaults () {
       clear();
       //aesActive(false);
+      longPressTime(1);
+      doublePressTime(0);
       uint8_t initValues[TEXT_LENGTH];
       memset(initValues, 0x00, TEXT_LENGTH);
       TEXT1(initValues);
       TEXT2(initValues);
       showLine(false);
       Alignment(AlignRight);
+    }
+};
+
+class RemChannel : public RemoteChannel<Hal,PEERS_PER_CHANNEL,DispList0, RemList1>  {
+public:
+  RemChannel () : RemoteChannel() {}
+    virtual ~RemChannel () {}
+    void configChanged() {
+      uint16_t _longpressTime = 300 + (this->getList1().longPressTime() * 100);
+      setLongPressTime(millis2ticks(_longpressTime));
+
+      List1Texts[(number() - 1)  * 2] = this->getList1().TEXT1();
+      List1Texts[((number() - 1) * 2) + 1] = this->getList1().TEXT2();
+
+      bool somethingChanged = (
+                                DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
+                                DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
+                              );
+
+      DisplayLines[(number() - 1)].showLine = this->getList1().showLine();
+      DisplayLines[(number() - 1)].Alignment = this->getList1().Alignment();
+      DPRINT(number() < 10 ? "0":"");DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINT(this->getList1().TEXT1());DPRINT(F(" - TEXT2 = ")); DPRINT(this->getList1().TEXT2());DPRINT(F(" - Line  = ")); DDEC(this->getList1().showLine());DPRINT(F(" - Align = ")); DDECLN(this->getList1().Alignment());
+
+      if (!runSetup && somethingChanged) ePaper.mustUpdateDisplay(true);
+    }
+
+    uint8_t flags () const {
+      return hal.battery.low() ? 0x80 : 0x00;
     }
 };
 
@@ -355,23 +394,7 @@ public:
   DispChannel () : RemoteChannel(), msgBufferIdx(0) {}
     virtual ~DispChannel () {}
 
-    void configChanged() {
-      if (number() < NUM_CHANNELS) {
-        List1Texts[(number() - 1)  * 2] = this->getList1().TEXT1();
-        List1Texts[((number() - 1) * 2) + 1] = this->getList1().TEXT2();
-
-        bool somethingChanged = (
-                                  DisplayLines[(number() - 1)].showLine != this->getList1().showLine() ||
-                                  DisplayLines[(number() - 1)].Alignment != this->getList1().Alignment()
-                                );
-
-        DisplayLines[(number() - 1)].showLine = this->getList1().showLine();
-        DisplayLines[(number() - 1)].Alignment = this->getList1().Alignment();
-        DPRINT(number() < 10 ? "0":"");DDEC(number()); DPRINT(F(" - TEXT1 = ")); DPRINT(this->getList1().TEXT1());DPRINT(F(" - TEXT2 = ")); DPRINT(this->getList1().TEXT2());DPRINT(F(" - Line  = ")); DDEC(this->getList1().showLine());DPRINT(F(" - Align = ")); DDECLN(this->getList1().Alignment());
-
-        if (!runSetup && somethingChanged) ePaper.mustUpdateDisplay(true);
-      }
-    }
+    void configChanged() { }
 
     bool validLineCount(){
       uint8_t cnt = 0;
@@ -490,18 +513,24 @@ public:
 
 class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>, NUM_CHANNELS, DispList0> {
   public:
-    VirtChannel<Hal, DispChannel, DispList0> c[NUM_CHANNELS];
+  VirtChannel<Hal, RemChannel,  DispList0> c[NUM_CHANNELS - 1];
+  VirtChannel<Hal, DispChannel, DispList0> d;
   public:
     typedef ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>, NUM_CHANNELS, DispList0> DeviceType;
     DisplayDevice (const DeviceInfo& info, uint16_t addr) : DeviceType(info, addr) {
-      for (uint8_t i = 0; i < NUM_CHANNELS; i++) {
+      for (uint8_t i = 0; i < NUM_CHANNELS - 1; i++) {
         DeviceType::registerChannel(c[i], i+1);
       }
+      DeviceType::registerChannel(d, NUM_CHANNELS);
     }
     virtual ~DisplayDevice () {}
 
-    DispChannel& dispChannel (uint8_t num)  {
+    RemChannel& remChannel (uint8_t num)  {
       return c[num - 1];
+    }
+
+    DispChannel& dispChannel ()  {
+      return d;
     }
 
     bool process(Message& msg) {
@@ -579,16 +608,16 @@ void setup () {
 
   DINIT(57600, ASKSIN_PLUS_PLUS_IDENTIFIER);
   sdev.init(hal);
-  remoteChannelISR(sdev.dispChannel(1),BTN1_PIN);
-  remoteChannelISR(sdev.dispChannel(2),BTN2_PIN);
-  remoteChannelISR(sdev.dispChannel(3),BTN3_PIN);
-  remoteChannelISR(sdev.dispChannel(4),BTN4_PIN);
-  remoteChannelISR(sdev.dispChannel(5),BTN5_PIN);
-  remoteChannelISR(sdev.dispChannel(6),BTN6_PIN);
-  remoteChannelISR(sdev.dispChannel(7),BTN7_PIN);
-  remoteChannelISR(sdev.dispChannel(8),BTN8_PIN);
-  remoteChannelISR(sdev.dispChannel(9),BTN9_PIN);
-  remoteChannelISR(sdev.dispChannel(10),BTN10_PIN);
+  remoteChannelISR(sdev.remChannel(1),BTN1_PIN);
+  remoteChannelISR(sdev.remChannel(2),BTN2_PIN);
+  remoteChannelISR(sdev.remChannel(3),BTN3_PIN);
+  remoteChannelISR(sdev.remChannel(4),BTN4_PIN);
+  remoteChannelISR(sdev.remChannel(5),BTN5_PIN);
+  remoteChannelISR(sdev.remChannel(6),BTN6_PIN);
+  remoteChannelISR(sdev.remChannel(7),BTN7_PIN);
+  remoteChannelISR(sdev.remChannel(8),BTN8_PIN);
+  remoteChannelISR(sdev.remChannel(9),BTN9_PIN);
+  remoteChannelISR(sdev.remChannel(10),BTN10_PIN);
 
   buttonISR(cfgBtn, CONFIG_BUTTON_PIN);
   sdev.initDone();
@@ -598,7 +627,7 @@ void setup () {
   ePaper.init();
 #endif
 
-  sdev.dispChannel(11).changed(true);
+  sdev.dispChannel().changed(true);
 
   runSetup = false;
 }
