@@ -673,9 +673,15 @@ void updateDisplay() {
 
     uint16_t leftTextPos = 0xffff;
     uint16_t fontWidth = u8g2Fonts.getUTF8Width(viewText.c_str());
+    uint16_t y = i * 40 + 30;
 
     switch (DisplayLines[i].Alignment) {
       case AlignLeft:
+        // TomMajor Erweiterung x-Textposition
+        if (viewText.startsWith("@p")) {
+            PrintTextWithPosition(viewText, y);
+            continue;
+        }
         leftTextPos = 40;
         if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
         break;
@@ -700,7 +706,7 @@ void updateDisplay() {
         break;
     }
 
-    u8g2Fonts.setCursor(leftTextPos, (i * 40) + 30);
+    u8g2Fonts.setCursor(leftTextPos, y);
     u8g2Fonts.print(viewText);
   }
 }
@@ -757,4 +763,26 @@ void initDisplay() {
   }
 
   display.drawRect(50, 138, 200, 145, ePaper.ForegroundColor());
+}
+
+void PrintTextWithPosition(String text, int y)
+{
+  while (text.length()) {
+    int pos = text.lastIndexOf("@p");
+    if (pos >= 0) {
+      String tPos = text.substring(pos+2, pos+4); // Position als String
+      String tText = text.substring(pos+4);  // Ausgabetext
+      text.remove(pos);
+      if (tText.length()) {
+        uint16_t iPos = tPos.toInt();  // Position als int
+        //Serial.print(iPos); Serial.print(" "); 
+        //Serial.print(tText); Serial.println(" ");
+        uint16_t left = iPos * display.width() / 100u;
+        u8g2Fonts.setCursor(left, y);
+        u8g2Fonts.print(tText);
+      }
+    } else {
+      break;
+    }
+  }
 }
