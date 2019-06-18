@@ -168,11 +168,11 @@ private:
   bool                 mUpdateDisplay;
   bool                 shInitDisplay;
   bool                 inverted;
-  bool                 working;
+  bool                 waiting;
   uint16_t             clFG;
   uint16_t             clBG;
 public:
-  ePaperType () :  Alarm(0), mUpdateDisplay(false), shInitDisplay(false), inverted(false), working(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
+  ePaperType () :  Alarm(0), mUpdateDisplay(false), shInitDisplay(false), inverted(false), waiting(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
   virtual ~ePaperType () {}
 
   uint16_t ForegroundColor() {
@@ -233,22 +233,22 @@ public:
     u8g2Fonts.setBackgroundColor(BackgroundColor());
   }
 
-  void isWorking(bool w) {
-    working = w;
+  void isWaiting(bool w) {
+    waiting = w;
   }
 
-  bool isWorking() {
-    return working;
+  bool isWaiting() {
+    return waiting;
   }
 
   void setRefreshAlarm (uint32_t t) {
-    isWorking(true);
+    isWaiting(true);
     sysclock.cancel(*this);
     Alarm::set(millis2ticks(t));
     sysclock.add(*this);
   }
   virtual void trigger (__attribute__((unused)) AlarmClock& clock) {
-    isWorking(false);
+    isWaiting(false);
     if (this->mustUpdateDisplay()) {
       this->mustUpdateDisplay(false);
   #ifndef NDISPLAY
@@ -652,7 +652,7 @@ void loop() {
       hal.activity.sleepForever(hal);
     }
 
-    if (ePaper.isWorking() == false)
+    if (ePaper.isWaiting() == false)
       hal.activity.savePower<Sleep<>>(hal);
 #else
     hal.activity.savePower<Idle<>>(hal);
