@@ -1,6 +1,6 @@
-# HB-Dis-EP-42BW
+# HB-Dis-EP-42BW (jetzt auch mit Color-Display Unterstützung)
 
-![img](Images/IMG_9206.jpg)
+<img src="Images/IMG_9206.jpg" width=300 height=350></img><img src="Images/IMG_9965.jpg" width=300 height=350></img>
 
 ## Infos
 Thread im Homematic-Forum: https://homematic-forum.de/forum/viewtopic.php?f=76&t=48153
