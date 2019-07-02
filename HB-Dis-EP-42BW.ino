@@ -11,6 +11,7 @@
 // #define USE_HW_SERIAL
 // #define NDEBUG
 // #define NDISPLAY
+// #define USE_COLOR
 #define BATTERY_MODE
 
 #ifdef BATTERY_MODE
@@ -23,7 +24,12 @@
 
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
-#include <GxGDEW042T2/GxGDEW042T2.h>      // 4.2" b/w
+#include <GxEPD.h>
+#ifdef USE_COLOR
+#include <GxGDEW042Z15/GxGDEW042Z15.h>      // 4.2" color
+#else
+#include <GxGDEW042T2/GxGDEW042T2.h>        // 4.2" b/w
+#endif
 
 #include <GxIO/GxIO_SPI/GxIO_SPI.h>
 #include <GxIO/GxIO.h>
@@ -81,6 +87,7 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define MSG_START_KEY     0x02
 #define MSG_TEXT_KEY      0x12
 #define MSG_ICON_KEY      0x13
+#define MSG_COLOR_OFFSET  0x04
 #define MSG_CLR_LINE_KEY  0xFE
 #define MSG_MIN_LENGTH    13
 #define MSG_BUFFER_LENGTH 224
@@ -108,7 +115,9 @@ enum Alignments {AlignRight = 0, AlignCenterIconRight = 1, AlignCenterIconLeft =
 typedef struct {
   uint8_t Alignment = AlignRight;
   uint8_t Icon      = 0xff;
+  bool IconColored  = false;
   String Text       = "";
+  bool TextColored  = false;
   bool showLine     = false;
 } DisplayLine;
 DisplayLine DisplayLines[DISPLAY_LINES];
@@ -472,21 +481,28 @@ public:
             }
           }
 
-          if (msgBuffer[i] == MSG_TEXT_KEY) {
+          if (msgBuffer[i] == MSG_TEXT_KEY || msgBuffer[i] == (MSG_TEXT_KEY + MSG_COLOR_OFFSET) ) {
             getText = true;
             DisplayLines[currentLine].Icon = 0xff;  //clear icon
+#ifdef USE_COLOR
+            DisplayLines[currentLine].TextColored = (msgBuffer[i] == (MSG_TEXT_KEY + MSG_COLOR_OFFSET));
+#endif
           }
 
-          if (msgBuffer[i] == MSG_ICON_KEY) {
+          if (msgBuffer[i] ==  MSG_ICON_KEY || msgBuffer[i] == (MSG_ICON_KEY + MSG_COLOR_OFFSET) ) {
             getText = false;
             uint8_t iconPos = i + 1;
             if (iconPos < MSG_BUFFER_LENGTH) {
               if (msgBuffer[iconPos] >= 0x80) {
                 uint8_t iconNumber = msgBuffer[iconPos] - 0x80;
-                if (iconNumber < ICON_COUNT)
+                if (iconNumber < ICON_COUNT) {
                   DisplayLines[currentLine].Icon = iconNumber;
-                else
+#ifdef USE_COLOR
+                  DisplayLines[currentLine].IconColored = msgBuffer[i] == (MSG_ICON_KEY + MSG_COLOR_OFFSET);
+#endif
+                } else {
                   DPRINT(F("ICON Number out of range. ")); DDECLN(iconNumber);
+                }
               }
             }
           }
@@ -502,7 +518,7 @@ public:
         DPRINTLN("");
 
         for (int i = 0; i < DISPLAY_LINES; i++) {
-         DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
+         DPRINT("LINE "); DDEC(i + 1); DPRINT(" ICON_COLOR = "); DDEC(DisplayLines[i].IconColored); DPRINT(" ICON = "); DDEC(DisplayLines[i].Icon); DPRINT(" TEXT_COLOR = "); DPRINT(DisplayLines[i].TextColored); DPRINT(" TEXT = "); DPRINT(DisplayLines[i].Text); DPRINTLN("");
         }
         ePaper.mustUpdateDisplay(true);
       }
@@ -651,9 +667,10 @@ void loop() {
     if (hal.battery.critical()) {
       hal.activity.sleepForever(hal);
     }
-
     if (ePaper.isWaiting() == false)
       hal.activity.savePower<Sleep<>>(hal);
+    else
+      hal.activity.savePower<Idle<>>(hal);
 #else
     hal.activity.savePower<Idle<>>(hal);
 #endif
@@ -662,6 +679,28 @@ void loop() {
 
 uint16_t centerPosition(const char * text) {
   return (display.width() / 2) - (u8g2Fonts.getUTF8Width(text) / 2);
+}
+
+void PrintTextWithPosition(String text, int y)
+{
+  while (text.length()) {
+    int pos = text.lastIndexOf("@p");
+    if (pos >= 0) {
+      String tPos = text.substring(pos+2, pos+4); // Position als String
+      String tText = text.substring(pos+4);  // Ausgabetext
+      text.remove(pos);
+      if (tText.length()) {
+        uint16_t iPos = tPos.toInt();  // Position als int
+        //Serial.print(iPos); Serial.print(" ");
+        //Serial.print(tText); Serial.println(" ");
+        uint16_t left = iPos * display.width() / 100u;
+        u8g2Fonts.setCursor(left, y);
+        u8g2Fonts.print(tText);
+      }
+    } else {
+      break;
+    }
+  }
 }
 
 void updateDisplay() {
@@ -686,6 +725,10 @@ void updateDisplay() {
 
     uint16_t leftTextPos = 0xffff;
     uint16_t fontWidth = u8g2Fonts.getUTF8Width(viewText.c_str());
+
+    bool icon_colored = DisplayLines[i].IconColored;
+    bool text_colored = DisplayLines[i].TextColored;
+
     uint16_t y = i * 40 + 30;
 
     switch (DisplayLines[i].Alignment) {
@@ -696,31 +739,41 @@ void updateDisplay() {
             continue;
         }
         leftTextPos = 40;
-        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
+        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, (( 24 - Icons[icon_number].width ) / 2) + 8, icon_top, Icons[icon_number].width, Icons[icon_number].height, icon_colored ? GxEPD_RED : ePaper.ForegroundColor(), icon_colored ? GxEPD::bm_normal | GxEPD::bm_transparent | GxEPD::bm_invert : GxEPD::bm_default);
         break;
       case AlignCenterIconRight:
         leftTextPos = (display.width() / 2) - (fontWidth / 2);
         if (icon_number != 255) {
           leftTextPos -= ((Icons[icon_number].width  / 2) + 4);
-          display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
+          display.drawBitmap(Icons[icon_number].Icon, leftTextPos + u8g2Fonts.getUTF8Width(viewText.c_str()) + 8 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, icon_colored ? GxEPD_RED : ePaper.ForegroundColor(), icon_colored ? GxEPD::bm_normal | GxEPD::bm_transparent | GxEPD::bm_invert : GxEPD::bm_default);
         }
         break;
       case AlignCenterIconLeft:
         leftTextPos = (display.width() / 2) - (fontWidth / 2);
         if (icon_number != 255) {
           leftTextPos += ((Icons[icon_number].width  / 2) + 4);
-          display.drawBitmap(Icons[icon_number].Icon, leftTextPos - Icons[icon_number].width - 8 , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
+          display.drawBitmap(Icons[icon_number].Icon, leftTextPos - Icons[icon_number].width - 8 , icon_top, Icons[icon_number].width, Icons[icon_number].height, icon_colored ? GxEPD_RED : ePaper.ForegroundColor(), icon_colored ? GxEPD::bm_normal | GxEPD::bm_transparent | GxEPD::bm_invert : GxEPD::bm_default);
         }
         break;
       case AlignRight:
       default:
         leftTextPos = display.width() - 40 - fontWidth;
-        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, ePaper.ForegroundColor(), GxEPD::bm_default);
+        if (icon_number != 255) display.drawBitmap(Icons[icon_number].Icon, display.width() - 32 + (( 24 - Icons[icon_number].width ) / 2) , icon_top, Icons[icon_number].width, Icons[icon_number].height, icon_colored ? GxEPD_RED : ePaper.ForegroundColor(), icon_colored ? GxEPD::bm_normal | GxEPD::bm_transparent | GxEPD::bm_invert : GxEPD::bm_default);
         break;
     }
 
     u8g2Fonts.setCursor(leftTextPos, y);
+
+
+#ifdef USE_COLOR
+    if (text_colored == true) u8g2Fonts.setForegroundColor(GxEPD_RED);
+#endif
+
     u8g2Fonts.print(viewText);
+
+#ifdef USE_COLOR
+    ePaper.setDisplayColors();
+#endif
   }
 }
 
@@ -739,17 +792,26 @@ void initDisplay() {
   const char * version      PROGMEM = "V " ASKSIN_PLUS_PLUS_VERSION;
   const char * compiledMsg  PROGMEM = "compiled on";
   const char * compiledDate PROGMEM = __DATE__ " " __TIME__;
+#ifdef USE_COLOR
+  const char * pages        PROGMEM = "GxGDEW042Z15_PAGES: " TOSTR(GxGDEW042Z15_PAGES);
+#else
   const char * pages        PROGMEM = "GxGDEW042T2_PAGES: " TOSTR(GxGDEW042T2_PAGES);
+#endif
   const char * ser                  = (char*)serial;
   const char * nomaster1    PROGMEM = "- keine Zentrale -";
   const char * nomaster2    PROGMEM = "- angelernt -";
 
   u8g2Fonts.setFont(u8g2_font_helvB24_tf);
-
   u8g2Fonts.setCursor(centerPosition(title), 95);
+#ifdef USE_COLOR
+  u8g2Fonts.setForegroundColor(GxEPD_RED);
+#endif
   u8g2Fonts.print(title);
 
   u8g2Fonts.setCursor(centerPosition(asksinpp), 170);
+#ifdef USE_COLOR
+    u8g2Fonts.setForegroundColor(ePaper.ForegroundColor());
+#endif
   u8g2Fonts.print(asksinpp);
 
   u8g2Fonts.setCursor(centerPosition(version), 210);
@@ -760,6 +822,9 @@ void initDisplay() {
   u8g2Fonts.print(compiledMsg);
   u8g2Fonts.setCursor(centerPosition(compiledDate), 255);
   u8g2Fonts.print(compiledDate);
+#ifdef USE_COLOR
+    ePaper.setDisplayColors();
+#endif
 
   u8g2Fonts.setFont(u8g2_font_helvR10_tf);
   u8g2Fonts.setCursor(centerPosition(pages), 275);
@@ -775,27 +840,9 @@ void initDisplay() {
     u8g2Fonts.setCursor(centerPosition(nomaster2), 386);u8g2Fonts.print(nomaster2);
   }
 
+#ifdef USE_COLOR
+  display.drawRect(50, 138, 200, 145, GxEPD_RED);
+#else
   display.drawRect(50, 138, 200, 145, ePaper.ForegroundColor());
-}
-
-void PrintTextWithPosition(String text, int y)
-{
-  while (text.length()) {
-    int pos = text.lastIndexOf("@p");
-    if (pos >= 0) {
-      String tPos = text.substring(pos+2, pos+4); // Position als String
-      String tText = text.substring(pos+4);  // Ausgabetext
-      text.remove(pos);
-      if (tText.length()) {
-        uint16_t iPos = tPos.toInt();  // Position als int
-        //Serial.print(iPos); Serial.print(" "); 
-        //Serial.print(tText); Serial.println(" ");
-        uint16_t left = iPos * display.width() / 100u;
-        u8g2Fonts.setCursor(left, y);
-        u8g2Fonts.print(tText);
-      }
-    } else {
-      break;
-    }
-  }
+#endif
 }
