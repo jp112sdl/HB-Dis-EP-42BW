@@ -672,6 +672,7 @@ void setup () {
   uint8_t powerupkey  = sdev.getList0().powerUpKey();
   if (powerupmode > 0) {
     sdev.remChannel(powerupkey + 1).state(powerupmode == 1 ? Button::released: Button::longreleased);
+    sdev.remChannel(powerupkey + 1).state(Button::none);
   }
 
   runSetup = false;
