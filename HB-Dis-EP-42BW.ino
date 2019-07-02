@@ -281,7 +281,7 @@ public:
   }
 } ePaper;
 
-DEFREGISTER(Reg0, MASTERID_REGS, DREG_TRANSMITTRYMAX, DREG_LEDMODE, DREG_LOWBATLIMIT, 0x06, 0x07)
+DEFREGISTER(Reg0, MASTERID_REGS, DREG_TRANSMITTRYMAX, DREG_LEDMODE, DREG_LOWBATLIMIT, 0x06, 0x07, 0x34)
 class DispList0 : public RegList0<Reg0> {
   public:
     DispList0(uint16_t addr) : RegList0<Reg0>(addr) {}
@@ -292,12 +292,20 @@ class DispList0 : public RegList0<Reg0> {
     uint8_t displayRefreshWaitTime () const { return this->readRegister(0x07,0); }
     bool displayRefreshWaitTime (uint8_t value) const { return this->writeRegister(0x07,value); }
 
+    uint8_t powerUpMode () const { return this->readRegister(0x34,0x03,0); }
+    bool powerUpMode (uint8_t value) const { return this->writeRegister(0x34,0x03,0,value); }
+
+    uint8_t powerUpKey () const { return this->readRegister(0x34,0x0f,2); }
+    bool powerUpKey (uint8_t value) const { return this->writeRegister(0x34,0x0f,2,value); }
+
     void defaults () {
       clear();
       displayInvertingHb(false);
       ledMode(1);
       transmitDevTryMax(2);
       displayRefreshWaitTime(50);
+      powerUpMode(0);
+      powerUpKey(0);
 #ifdef BATTERY_MODE
       lowBatLimit(24);
 #endif
@@ -595,11 +603,15 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
       DPRINT(F("displayInverting: ")); DDECLN(this->getList0().displayInvertingHb());
 
       DPRINT(F("RefreshWaitTime : ")); DDECLN(this->getList0().displayRefreshWaitTime());
+      DPRINT(F("PowerUpMode     : ")); DDECLN(this->getList0().powerUpMode());
+      DPRINT(F("PowerUpKey      : ")); DDECLN(this->getList0().powerUpKey());
 
       if (this->getList0().masterid().valid() == false || runSetup == true) {
-        ePaper.showInitDisplay(true);
-        ePaper.mustUpdateDisplay(true);
-        ePaper.setRefreshAlarm(20);
+        if (this->getList0().powerUpMode() == 0) {
+          ePaper.showInitDisplay(true);
+          ePaper.mustUpdateDisplay(true);
+          ePaper.setRefreshAlarm(20);
+        }
       }
 
       if (!runSetup && invertChanged) ePaper.mustUpdateDisplay(true);
@@ -655,6 +667,12 @@ void setup () {
 #endif
 
   sdev.dispChannel().changed(true);
+
+  uint8_t powerupmode = sdev.getList0().powerUpMode();
+  uint8_t powerupkey  = sdev.getList0().powerUpKey();
+  if (powerupmode > 0) {
+    sdev.remChannel(powerupkey + 1).state(powerupmode == 1 ? Button::released: Button::longreleased);
+  }
 
   runSetup = false;
 }
