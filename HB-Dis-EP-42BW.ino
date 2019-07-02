@@ -686,10 +686,10 @@ void loop() {
     if (hal.battery.critical()) {
       hal.activity.sleepForever(hal);
     }
-    if (ePaper.isWaiting() == false)
+    //if (ePaper.isWaiting() == false)
       hal.activity.savePower<Sleep<>>(hal);
-    else
-      hal.activity.savePower<Idle<>>(hal);
+    //else
+    //  hal.activity.savePower<Idle<>>(hal);
 #else
     hal.activity.savePower<Idle<>>(hal);
 #endif
