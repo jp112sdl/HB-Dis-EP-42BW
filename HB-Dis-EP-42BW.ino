@@ -244,6 +244,7 @@ public:
 
   void isWaiting(bool w) {
     waiting = w;
+    DPRINT("wait:"); DDECLN(waiting);
   }
 
   bool isWaiting() {
@@ -686,10 +687,11 @@ void loop() {
     if (hal.battery.critical()) {
       hal.activity.sleepForever(hal);
     }
-    //if (ePaper.isWaiting() == false)
+    if (ePaper.isWaiting()) {
+      hal.activity.savePower<Idle<>>(hal);
+    } else {
       hal.activity.savePower<Sleep<>>(hal);
-    //else
-    //  hal.activity.savePower<Idle<>>(hal);
+    }
 #else
     hal.activity.savePower<Idle<>>(hal);
 #endif
