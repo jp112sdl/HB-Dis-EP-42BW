@@ -730,7 +730,7 @@ void updateDisplay() {
 
   for (uint16_t i = 0; i < 10; i++) {
     if (DisplayLines[i].showLine && i < 10) display.drawLine(0, ((i + 1) * 40), display.width(), ((i + 1) * 40), ePaper.ForegroundColor());
-    DisplayLines[i].Text.trim();
+    //DisplayLines[i].Text.trim();
     String viewText = DisplayLines[i].Text;
     viewText.replace("{", "ä");
     viewText.replace("|", "ö");
