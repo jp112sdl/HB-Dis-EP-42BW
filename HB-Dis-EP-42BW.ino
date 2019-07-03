@@ -748,7 +748,6 @@ void updateDisplay() {
     uint16_t fontWidth = u8g2Fonts.getUTF8Width(viewText.c_str());
 
     bool icon_colored = DisplayLines[i].IconColored;
-    bool text_colored = DisplayLines[i].TextColored;
 
     uint16_t y = i * 40 + 30;
 
@@ -787,7 +786,7 @@ void updateDisplay() {
 
 
 #ifdef USE_COLOR
-    if (text_colored == true) u8g2Fonts.setForegroundColor(GxEPD_RED);
+    if (DisplayLines[i].TextColored == true) u8g2Fonts.setForegroundColor(GxEPD_RED);
 #endif
 
     u8g2Fonts.print(viewText);
