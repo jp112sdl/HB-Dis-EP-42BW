@@ -12,6 +12,7 @@
 // #define NDEBUG
 // #define NDISPLAY
 // #define USE_COLOR
+
 #define BATTERY_MODE
 
 #ifdef BATTERY_MODE
@@ -80,9 +81,10 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 
 #define DISPLAY_ROTATE     3 // 0 = 0° , 1 = 90°, 2 = 180°, 3 = 270°
 
-#define PEERS_PER_CHANNEL 8
-#define NUM_CHANNELS      11
-#define LOWBAT_VOLTAGE    24
+#define PEERS_PER_CHANNEL   8
+#define NUM_CHANNELS        11
+#define DEF_LOWBAT_VOLTAGE  24
+#define DEF_CRITBAT_VOLTAGE 22
 
 #define MSG_START_KEY     0x02
 #define MSG_TEXT_KEY      0x12
@@ -145,8 +147,8 @@ class Hal: public BaseHal {
       BaseHal::init(id);
 #ifdef BATTERY_MODE
       battery.init(seconds2ticks(60UL * 60 * 21), sysclock); //battery measure once an day
-      battery.low(24);
-      battery.critical(22);
+      battery.low(DEF_LOWBAT_VOLTAGE);
+      battery.critical(DEF_CRITBAT_VOLTAGE);
       activity.stayAwake(seconds2ticks(15));
 #endif
     }
@@ -159,6 +161,7 @@ class Hal: public BaseHal {
 
 void initDisplay();
 void updateDisplay();
+void emptyBatteryDisplay();
 class ePaperType : public Alarm {
   class ePaperWorkingLedType : public StatusLed<LED_PIN_2>  {
   private:
@@ -282,7 +285,7 @@ public:
   }
 } ePaper;
 
-DEFREGISTER(Reg0, MASTERID_REGS, DREG_TRANSMITTRYMAX, DREG_LEDMODE, DREG_LOWBATLIMIT, 0x06, 0x07, 0x34)
+DEFREGISTER(Reg0, MASTERID_REGS, DREG_TRANSMITTRYMAX, DREG_LEDMODE, DREG_LOWBATLIMIT, 0x06, 0x07, 0x34, 0x35)
 class DispList0 : public RegList0<Reg0> {
   public:
     DispList0(uint16_t addr) : RegList0<Reg0>(addr) {}
@@ -299,6 +302,9 @@ class DispList0 : public RegList0<Reg0> {
     uint8_t powerUpKey () const { return this->readRegister(0x34,0x0f,2); }
     bool powerUpKey (uint8_t value) const { return this->writeRegister(0x34,0x0f,2,value); }
 
+    uint8_t critBatLimit () const { return this->readRegister(0x35,0); }
+    bool critBatLimit (uint8_t value) const { return this->writeRegister(0x35,value); }
+
     void defaults () {
       clear();
       displayInvertingHb(false);
@@ -308,7 +314,8 @@ class DispList0 : public RegList0<Reg0> {
       powerUpMode(0);
       powerUpKey(0);
 #ifdef BATTERY_MODE
-      lowBatLimit(24);
+      lowBatLimit(DEF_LOWBAT_VOLTAGE);
+      critBatLimit(DEF_CRITBAT_VOLTAGE);
 #endif
     }
 };
@@ -584,8 +591,11 @@ class DisplayDevice : public ChannelDevice<Hal, VirtBaseChannel<Hal, DispList0>,
 
 #ifdef BATTERY_MODE
       uint8_t lowbat = getList0().lowBatLimit();
+      uint8_t critbat = getList0().critBatLimit();
       if( lowbat > 0 ) battery().low(lowbat);
+      if( critbat > 0 ) battery().critical(critbat);
       DPRINT(F("lowBat          : ")); DDECLN(lowbat);
+      DPRINT(F("critBat         : ")); DDECLN(critbat);
 #endif
 
       uint8_t ledmode = this->getList0().ledMode();
@@ -685,6 +695,7 @@ void loop() {
   if ( worked == false && poll == false ) {
 #ifdef BATTERY_MODE
     if (hal.battery.critical()) {
+      display.drawPaged(emptyBatteryDisplay);
       hal.activity.sleepForever(hal);
     }
     if (ePaper.isWaiting()) {
@@ -865,4 +876,25 @@ void initDisplay() {
 #else
   display.drawRect(50, 138, 200, 145, ePaper.ForegroundColor());
 #endif
+}
+
+void emptyBatteryDisplay() {
+  display.fillScreen(ePaper.BackgroundColor());
+#ifdef USE_COLOR
+  uint16_t fg = GxEPD_RED;
+#else
+  uint16_t fg = ePaper.ForegroundColor();
+#endif
+  display.fillRect(120, 80, 60, 40, fg);
+
+  uint8_t batt_x = 80;
+  uint8_t batt_y = 120;
+  uint8_t batt_w = 140;
+  uint8_t batt_h = 230;
+  uint8_t line_w = 4;
+
+  for (uint8_t i = 0 ; i < line_w; i++) {
+    display.drawRect(batt_x + i, batt_y + i, batt_w - i*2, batt_h - i*2, fg);
+    display.drawLine(batt_x + i, batt_y + batt_h - 1, batt_x + batt_w - line_w + i, batt_y + 1,fg);
+  }
 }
