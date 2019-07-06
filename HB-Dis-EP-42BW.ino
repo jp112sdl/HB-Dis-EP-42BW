@@ -677,13 +677,13 @@ void setup () {
   ePaper.init();
 #endif
 
-  sdev.dispChannel().changed(true);
-
   uint8_t powerupmode = sdev.getList0().powerUpMode();
   uint8_t powerupkey  = sdev.getList0().powerUpKey();
   if (powerupmode > 0) {
     sdev.remChannel(powerupkey + 1).state(powerupmode == 1 ? Button::released: Button::longreleased);
     sdev.remChannel(powerupkey + 1).state(Button::none);
+  } else {
+    sdev.dispChannel().changed(true);
   }
 
   runSetup = false;
