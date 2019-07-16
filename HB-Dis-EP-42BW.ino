@@ -25,7 +25,6 @@
 
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
-#include <GxEPD.h>
 #ifdef USE_COLOR
 #include <GxGDEW042Z15/GxGDEW042Z15.h>      // 4.2" color
 #else
