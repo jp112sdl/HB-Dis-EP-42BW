@@ -715,7 +715,9 @@ uint16_t centerPosition(const char * text) {
 void PrintTextWithPosition(String text, int y)
 {
   while (text.length()) {
-    int pos = text.lastIndexOf("@p");
+    int pos1 = text.lastIndexOf("@p");
+    int pos2 = text.lastIndexOf("@f");
+    int pos = max(pos1, pos2);
     if (pos >= 0) {
       String tPos = text.substring(pos+2, pos+4); // Position als String
       String tText = text.substring(pos+4);  // Ausgabetext
@@ -726,12 +728,22 @@ void PrintTextWithPosition(String text, int y)
         //Serial.print(tText); Serial.println(" ");
         uint16_t left = iPos * display.width() / 100u;
         u8g2Fonts.setCursor(left, y);
+#ifdef USE_COLOR
+        if (pos2 > pos1) {
+          u8g2Fonts.setForegroundColor(GxEPD_RED);
+        } else {
+          u8g2Fonts.setForegroundColor(ePaper.ForegroundColor());
+        }
+#endif
         u8g2Fonts.print(tText);
       }
     } else {
       break;
     }
   }
+#ifdef USE_COLOR
+  ePaper.setDisplayColors();    // restore default colors for possible next line in loop updateDisplay()
+#endif
 }
 
 void updateDisplay() {
@@ -764,7 +776,7 @@ void updateDisplay() {
     switch (DisplayLines[i].Alignment) {
       case AlignLeft:
         // TomMajor Erweiterung x-Textposition
-        if (viewText.startsWith("@p")) {
+        if (viewText.startsWith("@p") || viewText.startsWith("@f")) {
             PrintTextWithPosition(viewText, y);
             continue;
         }
