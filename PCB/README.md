@@ -87,7 +87,7 @@ Danach den Resonator, die Kondensatoren und Widerstände auflöten.
 Mit einem Multimeter messen ob kein Kurzschluss zwischen VCC und GND besteht (mehrere 10 K Widerstand sind okay).
 
 Den ISP Programmieradapter an den 6-poligen Anschluss auf der **Rückseite** anschließen.
-Nun kann entweder der Sketch direkt geflasht werden ("Hochladen mit Programmer"), oder zuerst der [Bootloader](https://github.com/TomMajor/AskSinPP_Examples/tree/master/Info/Bootloader/mega1284) und dann der eigentliche Sketch über den FTDI-Anschluss.
+Nun kann entweder der Sketch direkt geflasht werden ("Hochladen mit Programmer"), oder zuerst der [Bootloader](https://github.com/TomMajor/SmartHome/tree/master/Info/Bootloader#bootloader-atmega1284p-rc-oszillator-oder-quarz-8mhz) und dann der eigentliche Sketch über den FTDI-Anschluss.
 
 Pin am ISP-Kabel | Bedeutung
 ---------------- | ----------
