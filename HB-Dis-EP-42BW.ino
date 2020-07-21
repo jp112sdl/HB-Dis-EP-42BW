@@ -180,12 +180,13 @@ class ePaperType : public Alarm {
 private:
   bool                 mUpdateDisplay;
   bool                 shInitDisplay;
+  bool                 shOutOfHouseDisplay;
   bool                 inverted;
   bool                 waiting;
   uint16_t             clFG;
   uint16_t             clBG;
 public:
-  ePaperType () :  Alarm(0), mUpdateDisplay(false), shInitDisplay(false), inverted(false), waiting(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
+  ePaperType () :  Alarm(0), mUpdateDisplay(false), shInitDisplay(false), shOutOfHouseDisplay(false), inverted(false), waiting(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
   virtual ~ePaperType () {}
 
   uint16_t ForegroundColor() {
@@ -218,6 +219,14 @@ public:
 
   void showInitDisplay(bool s) {
     shInitDisplay = s;
+  }
+
+  bool showOutOfHouseDisplay() {
+    return shOutOfHouseDisplay;
+  }
+
+  void showOutOfHouseDisplay(bool s) {
+    shOutOfHouseDisplay = s;
   }
 
   bool mustUpdateDisplay() {
@@ -274,9 +283,12 @@ public:
       if (this->showInitDisplay() == true) {
         this->showInitDisplay(false);
         display.drawPaged(initDisplay);
-      } else {
-        display.drawPaged(updateDisplay);
-      }
+      } else if (this->showOutOfHouseDisplay() == true ) {
+          display.drawPaged(outOfHouseDisplay);
+          this->showOutOfHouseDisplay(false);
+        } else {
+          display.drawPaged(updateDisplay);
+        }
 
       workingLed.ledOff();
   #else
@@ -531,7 +543,7 @@ public:
             DisplayLines[currentLine].Icon = 0xff;
           }
           if (msgBuffer[i] == MSG_OUTOFHOUSE) {
-            display.drawPaged(outOfHouseDisplay);
+            ePaper.showOutOfHouseDisplay(true);
           }
         }
 
