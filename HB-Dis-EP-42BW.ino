@@ -92,6 +92,7 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #define MSG_CLR_LINE_KEY  0xFE
 #define MSG_MIN_LENGTH    13
 #define MSG_BUFFER_LENGTH 224
+#define MSG_OUTOFHOUSE    0xFD
 
 #include "Icons.h"
 
@@ -161,6 +162,7 @@ class Hal: public BaseHal {
 void initDisplay();
 void updateDisplay();
 void emptyBatteryDisplay();
+void outOfHouseDisplay();
 class ePaperType : public Alarm {
   class ePaperWorkingLedType : public StatusLed<LED_PIN_2>  {
   private:
@@ -178,12 +180,13 @@ class ePaperType : public Alarm {
 private:
   bool                 mUpdateDisplay;
   bool                 shInitDisplay;
+  bool                 shOutOfHouseDisplay;
   bool                 inverted;
   bool                 waiting;
   uint16_t             clFG;
   uint16_t             clBG;
 public:
-  ePaperType () :  Alarm(0), mUpdateDisplay(false), shInitDisplay(false), inverted(false), waiting(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
+  ePaperType () :  Alarm(0), mUpdateDisplay(false), shInitDisplay(false), shOutOfHouseDisplay(false), inverted(false), waiting(false), clFG(GxEPD_BLACK), clBG(GxEPD_WHITE)  {}
   virtual ~ePaperType () {}
 
   uint16_t ForegroundColor() {
@@ -216,6 +219,14 @@ public:
 
   void showInitDisplay(bool s) {
     shInitDisplay = s;
+  }
+
+  bool showOutOfHouseDisplay() {
+    return shOutOfHouseDisplay;
+  }
+
+  void showOutOfHouseDisplay(bool s) {
+    shOutOfHouseDisplay = s;
   }
 
   bool mustUpdateDisplay() {
@@ -272,9 +283,12 @@ public:
       if (this->showInitDisplay() == true) {
         this->showInitDisplay(false);
         display.drawPaged(initDisplay);
-      } else {
-        display.drawPaged(updateDisplay);
-      }
+      } else if (this->showOutOfHouseDisplay() == true ) {
+          display.drawPaged(outOfHouseDisplay);
+          this->showOutOfHouseDisplay(false);
+        } else {
+          display.drawPaged(updateDisplay);
+        }
 
       workingLed.ledOff();
   #else
@@ -527,6 +541,9 @@ public:
             for (uint8_t i = 0; i < TEXT_LENGTH; i++)
               Text += F(" ");
             DisplayLines[currentLine].Icon = 0xff;
+          }
+          if (msgBuffer[i] == MSG_OUTOFHOUSE) {
+            ePaper.showOutOfHouseDisplay(true);
           }
         }
 
@@ -908,4 +925,26 @@ void emptyBatteryDisplay() {
     display.drawRect(batt_x + i, batt_y + i, batt_w - i*2, batt_h - i*2, fg);
     display.drawLine(batt_x + i, batt_y + batt_h - 1, batt_x + batt_w - line_w + i, batt_y + 1,fg);
   }
+}
+
+void outOfHouseDisplay() {
+  display.fillScreen(ePaper.BackgroundColor());
+#ifdef USE_COLOR
+ uint16_t fg = GxEPD_RED;
+#else
+ uint16_t fg = ePaper.ForegroundColor();
+#endif
+
+
+ uint8_t home_x = 50;
+ uint8_t home_y = 150;
+ uint8_t home_w = 200;
+ uint8_t home_h = 230;
+ uint8_t line_w = 4;
+
+ for (uint8_t i = 0 ; i < line_w; i++) {
+   display.drawRect(home_x + i, home_y + i, home_w - i*2, home_h - i*2, fg);
+   display.drawLine(home_x + i, home_y + i, home_y + i , home_x + i, fg);
+   display.drawLine(home_y +i , home_x + i , home_x + home_w - i, home_y - i,  fg);
+ }
 }
