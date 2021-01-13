@@ -19,13 +19,6 @@
 #define USE_WOR
 #endif
 
-// make compatible with v5.0.0
-#ifndef ASKSIN_PLUS_PLUS_VERSION_STR
-  #define ASKSIN_PLUS_PLUS_VERSION_STR ASKSIN_PLUS_PLUS_VERSION
-#endif
-
-
-
 //////////////////// DISPLAY DEFINITIONS /////////////////////////////////////
 #include <GxEPD.h>
 #ifdef USE_COLOR
@@ -58,6 +51,11 @@ U8G2_FONTS_GFX u8g2Fonts(display);
 #include <Register.h>
 #include <Remote.h>
 #include <MultiChannelDevice.h>
+
+// make compatible with v5.0.0
+#ifndef ASKSIN_PLUS_PLUS_VERSION_STR
+  #define ASKSIN_PLUS_PLUS_VERSION_STR ASKSIN_PLUS_PLUS_VERSION
+#endif
 
 #define CC1101_CS_PIN       4   // PB4
 #define CC1101_GDO0_PIN     2   // PB2
